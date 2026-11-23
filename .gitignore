@@ -1,0 +1,11 @@
+# Build output
+target/
+
+# Workspace-local Maven caches used by run.sh in restricted environments
+.mvn-home/
+.m2-repository/
+
+# IDE / OS files
+.idea/
+*.iml
+.DS_Store

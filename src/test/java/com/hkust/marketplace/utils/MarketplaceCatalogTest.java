@@ -103,7 +103,7 @@ class MarketplaceCatalogTest {
     }
 
     @Test
-    void listingDetailsAreVisibleToPriorParticipantsAndCountPublicViews() {
+    void listingDetailsAreVisibleToPriorParticipantsAndCountAuthorizedViews() {
         Listing listing = item("Cable", SELL, 15.0, 3);
         assertThrows(IllegalArgumentException.class, () -> catalog.openListing(alice, "missing"));
         assertSame(listing, catalog.openListing(alice, listing.getId()));
@@ -113,7 +113,7 @@ class MarketplaceCatalogTest {
         listing.setStatus(ListingStatus.REMOVED);
         assertSame(listing, catalog.openListing(alice, listing.getId()));
         assertSame(listing, catalog.openListing(bob, listing.getId()));
-        assertEquals(1, listing.getViewCount());
+        assertEquals(3, listing.getViewCount());
         Listing privateListing = item("Cable 2", SELL, 20.0, 3);
         privateListing.setStatus(ListingStatus.REJECTED);
         assertThrows(IllegalArgumentException.class, () -> catalog.openListing(alice, privateListing.getId()));

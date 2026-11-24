@@ -39,6 +39,37 @@ class AdminStoreTest {
     }
 
     @Test
+    void approvalCanBeRecordedWhileSellerIsInactiveWithoutPublishingTheirListing() {
+        DummyDataService data = new DummyDataService(true, LocalDateTime::now);
+        Listing pending = data.getPendingListings().get(0);
+        String seller = pending.getSellerUsername();
+        assertTrue(data.deactivateUser(seller, "admin"));
+        assertTrue(data.approveListing(pending.getId(), "admin"));
+        assertEquals(LIVE, pending.getStatus());
+        assertFalse(data.getLiveListings().contains(pending));
+        assertTrue(data.getNotificationsFor(seller).stream().anyMatch(n -> n.getMessage().contains("when your account is active")));
+        assertTrue(data.reactivateUser(seller, "admin"));
+        assertTrue(data.getLiveListings().contains(pending));
+    }
+
+    @Test
+    void adminTakeDownAlsoCancelsLegacyDealsWithNoActiveRequest() {
+        var data = new DummyDataService(true, LocalDateTime::now);
+        Listing item = data.getLiveListings().get(0);
+        Deal orphan = new Deal();
+        orphan.setListingId(item.getId());
+        orphan.setBuyerUsername("alice");
+        orphan.setSellerUsername(item.getSellerUsername());
+        orphan.setListingTitle(item.getTitle());
+        data.addDeal(orphan);
+        int original = data.getActiveRequestsForListing(item.getId()).size();
+        assertEquals(original + 1, data.takeDownListing(item.getId(), "Discontinued listing", "admin"));
+        assertEquals("Cancelled", orphan.getStatus());
+        assertNotNull(orphan.getCancelledAt());
+        assertEquals(REMOVED, item.getStatus());
+    }
+
+    @Test
     void adminProtectsSeedAccountAndCanManageUserVisibility() {
         DummyDataService data = new DummyDataService(true, LocalDateTime::now);
         assertFalse(data.deactivateUser("admin", "admin"));

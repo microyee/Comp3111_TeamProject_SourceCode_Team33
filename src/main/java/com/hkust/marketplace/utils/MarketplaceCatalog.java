@@ -65,14 +65,13 @@ public final class MarketplaceCatalog {
             accounts.requireAccount(buyer, UserRole.BUYER);
             Listing listing = data.findListing(id);
             require(listing != null, "Listing no longer exists.");
-            if (isPublic(listing)) {
-                listing.setViewCount(listing.getViewCount() + 1);
-            } else {
+            if (!isPublic(listing)) {
                 require(data.getRequestsForBuyer(buyer.getUsername()).stream().anyMatch(r -> id.equals(r.getListingId()))
                         || data.getDealsForBuyer(buyer.getUsername()).stream().anyMatch(d -> id.equals(d.getListingId()))
                         || data.getChatsForBuyer(buyer.getUsername()).stream().anyMatch(c -> id.equals(c.getListingId())),
                         "This listing is unavailable.");
             }
+            listing.setViewCount(listing.getViewCount() + 1);
             return listing;
         }
     }

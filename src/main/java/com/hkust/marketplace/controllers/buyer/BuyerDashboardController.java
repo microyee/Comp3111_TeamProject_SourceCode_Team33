@@ -12,6 +12,7 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
 
+import java.io.File;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Locale;
@@ -459,8 +460,16 @@ public class BuyerDashboardController {
 
     private static Node photo(String url, int width, int height) {
         try {
-            Image image = new Image(url, width, height, true, true, false);
-            if (!image.isError()) return new ImageView(image);
+            if (!url.isBlank()) {
+                String source = new File(url).toURI().toString();
+                Image image = new Image(source, width, height, true, true, false);
+                if (!image.isError()) {
+                    ImageView view = new ImageView(image);
+                    view.getStyleClass().add("listing-photo");
+                    view.setAccessibleText("Listing photo");
+                    return view;
+                }
+            }
         } catch (IllegalArgumentException ignored) {
             // A missing photo leaves the listing and its actions available.
         }

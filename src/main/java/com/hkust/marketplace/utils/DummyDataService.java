@@ -592,10 +592,13 @@ public class DummyDataService {
         listing.setStatus(ListingStatus.LIVE);
         listing.setReviewedAt(LocalDateTime.now());
         listing.setRejectionReason(null);
+        boolean visible = catalog.isPublic(listing);
+        String availability = visible ? "is now live in the marketplace."
+                : "will appear in the marketplace when your account is active.";
         addNotification(new Notification(listing.getSellerUsername(), "Listing Approved",
-                "Your listing '" + listing.getTitle() + "' is now live in the marketplace.",
+                "Your listing '" + listing.getTitle() + "' " + availability,
                 "System", "LISTINGS", listing.getId()));
-        if (catalog.isPublic(listing)) catalog.notifyFollowers(listing);
+        if (visible) catalog.notifyFollowers(listing);
         logAudit(actor, "APPROVE_LISTING", "LISTING", listing.getId(), listing.getTitle());
         return true;
     }

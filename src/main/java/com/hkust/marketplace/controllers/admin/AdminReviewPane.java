@@ -164,8 +164,10 @@ final class AdminReviewPane extends VBox {
         }
         try {
             if (data.approveListing(current.getId(), adminUsername())) {
+                String visibility = data.catalog().isPublic(current) ? " is now live."
+                        : " will be visible when the seller account is active.";
                 AdminDialogs.info("Listing approved",
-                        "'" + current.getTitle() + "' is now live. The seller has been notified.");
+                        "'" + current.getTitle() + "'" + visibility + " The seller has been notified.");
             } else {
                 AdminDialogs.warn("Could not approve",
                         "The listing changed while you were reviewing it. The list has been refreshed.");

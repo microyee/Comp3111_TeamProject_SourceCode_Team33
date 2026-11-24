@@ -404,3 +404,11 @@
     -fx-background-color: white;
 }
 
+
+.photo-placeholder {
+   -fx-background-color: #eaf0f6;
+   -fx-background-radius: 8;
+}
+.photo-placeholder .label {
+   -fx-text-fill: #546781;
+}

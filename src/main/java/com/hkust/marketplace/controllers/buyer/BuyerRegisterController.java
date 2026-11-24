@@ -1,9 +1,9 @@
 package com.hkust.marketplace.controllers.buyer;
 
-import com.hkust.marketplace.models.Buyer;
-import com.hkust.marketplace.models.User;
+import com.hkust.marketplace.models.UserRole;
 import com.hkust.marketplace.utils.DummyDataService;
 import com.hkust.marketplace.utils.SceneManager;
+import com.hkust.marketplace.utils.MarketplaceAccounts;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
@@ -20,52 +20,21 @@ public class BuyerRegisterController {
 
     @FXML
     public void initialize() {
-        residenceCombo.setItems(FXCollections.observableArrayList(
-                "Hall 1", "Hall 2", "Hall 3", "Hall 4", "Hall 5",
-                "Hall 6", "Hall 7", "Hall 8", "Hall 9",
-                "UG Hall 1", "UG Hall 2", "Off-campus"
-        ));
+        residenceCombo.setItems(FXCollections.observableArrayList(MarketplaceAccounts.RESIDENCES));
     }
 
     @FXML
     private void handleRegister() {
         hideMessages();
 
-        String username = usernameField.getText().trim();
-        String fullName = fullNameField.getText().trim();
-        String password = passwordField.getText();
-        String confirm = confirmPasswordField.getText();
-        String residence = residenceCombo.getValue();
-
-        // Validation
-        if (username.isEmpty()) {
-            showError("Username is required.");
+        try {
+            new MarketplaceAccounts(DummyDataService.getInstance()).register(UserRole.BUYER,
+                    usernameField.getText(), fullNameField.getText(), passwordField.getText(),
+                    confirmPasswordField.getText(), residenceCombo.getValue(), null, null);
+        } catch (IllegalArgumentException e) {
+            showError(e.getMessage());
             return;
         }
-        if (DummyDataService.getInstance().usernameExists(username)) {
-            showError("Username already taken. Please choose another.");
-            return;
-        }
-        if (fullName.isEmpty()) {
-            showError("Full Name cannot be empty.");
-            return;
-        }
-        String pwdCheck = DummyDataService.checkPasswordStrength(password);
-        if (!"OK".equals(pwdCheck)) {
-            showError(pwdCheck);
-            return;
-        }
-        if (!password.equals(confirm)) {
-            showError("Passwords do not match.");
-            return;
-        }
-
-        // The User constructor hashes the password with a random salt.
-        User user = new Buyer(username.toLowerCase(), fullName, password);
-        if (residence != null) {
-            user.setResidenceHall(residence);
-        }
-        DummyDataService.getInstance().registerUser(user);
 
         showSuccess("Registration successful! You can now login.");
         // Clear form

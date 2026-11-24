@@ -20,13 +20,13 @@ public class Request {
     private ListingType type;
     private String status; // Pending, Countered, Accepted, Declined, Cancelled
     private Double offerPrice;
-    private LocalDate borrowStart;
-    private LocalDate borrowEnd;
+    private LocalDateTime borrowStart;
+    private LocalDateTime borrowEnd;
 
     // Counteroffer terms (optional).
     private Double counterPrice;
-    private LocalDate counterBorrowStart;
-    private LocalDate counterBorrowEnd;
+    private LocalDateTime counterBorrowStart;
+    private LocalDateTime counterBorrowEnd;
 
     private LocalDateTime createdAt;
     private LocalDateTime respondedAt;
@@ -60,24 +60,36 @@ public class Request {
     public Double getOfferPrice() { return offerPrice; }
     public void setOfferPrice(Double offerPrice) { this.offerPrice = offerPrice; }
 
-    public LocalDate getBorrowStart() { return borrowStart; }
-    public void setBorrowStart(LocalDate borrowStart) { this.borrowStart = borrowStart; }
+    public LocalDate getBorrowStart() { return borrowStart == null ? null : borrowStart.toLocalDate(); }
+    public void setBorrowStart(LocalDate borrowStart) { this.borrowStart = borrowStart == null ? null : borrowStart.atStartOfDay(); }
 
-    public LocalDate getBorrowEnd() { return borrowEnd; }
-    public void setBorrowEnd(LocalDate borrowEnd) { this.borrowEnd = borrowEnd; }
+    public LocalDate getBorrowEnd() { return borrowEnd == null ? null : borrowEnd.toLocalDate(); }
+    public void setBorrowEnd(LocalDate borrowEnd) { this.borrowEnd = borrowEnd == null ? null : borrowEnd.atStartOfDay(); }
 
     public Double getCounterPrice() { return counterPrice; }
     public void setCounterPrice(Double counterPrice) { this.counterPrice = counterPrice; }
 
-    public LocalDate getCounterBorrowStart() { return counterBorrowStart; }
+    public LocalDate getCounterBorrowStart() { return counterBorrowStart == null ? null : counterBorrowStart.toLocalDate(); }
     public void setCounterBorrowStart(LocalDate counterBorrowStart) {
-        this.counterBorrowStart = counterBorrowStart;
+        this.counterBorrowStart = counterBorrowStart == null ? null : counterBorrowStart.atStartOfDay();
     }
 
-    public LocalDate getCounterBorrowEnd() { return counterBorrowEnd; }
+    public LocalDate getCounterBorrowEnd() { return counterBorrowEnd == null ? null : counterBorrowEnd.toLocalDate(); }
     public void setCounterBorrowEnd(LocalDate counterBorrowEnd) {
-        this.counterBorrowEnd = counterBorrowEnd;
+        this.counterBorrowEnd = counterBorrowEnd == null ? null : counterBorrowEnd.atStartOfDay();
     }
+
+    public LocalDateTime getBorrowStartAt() { return borrowStart; }
+    public void setBorrowStartAt(LocalDateTime time) { this.borrowStart = time; }
+
+    public LocalDateTime getBorrowEndAt() { return borrowEnd; }
+    public void setBorrowEndAt(LocalDateTime time) { this.borrowEnd = time; }
+
+    public LocalDateTime getCounterBorrowStartAt() { return counterBorrowStart; }
+    public void setCounterBorrowStartAt(LocalDateTime time) { this.counterBorrowStart = time; }
+
+    public LocalDateTime getCounterBorrowEndAt() { return counterBorrowEnd; }
+    public void setCounterBorrowEndAt(LocalDateTime time) { this.counterBorrowEnd = time; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

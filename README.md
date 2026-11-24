@@ -3,8 +3,8 @@
 A **JavaFX + Maven** campus marketplace application for the COMP3111 group project.
 
 The project uses an in-memory data store (`DummyDataService`) so it runs without a
-database or network connection.  The Buyer and Seller portals remain demo-level, while
-**all Task 3 (Admin Portal) functions are implemented end-to-end** — see
+database or network connection. The buyer branch completes the Buyer portal and connects
+it to the Admin portal. The Seller portal on this branch still has its original demo screens. See
 [`ADMIN_TASK3.md`](ADMIN_TASK3.md) for the feature-by-feature mapping and demo script.
 
 ## Prerequisites
@@ -84,8 +84,11 @@ mvn clean compile javafx:run
   `Message`; `Listing`; `Notification`
 
 ### Buyer Portal
-- Registration, Login, Browse Marketplace, Make Offer / Borrow / Claim
-- My Deals, Deal History, Favourites (placeholder), Notifications, Profile
+- Register, log in, manage profile and change password
+- Browse and filter live listings, view photos and seller profiles, save favourites and follow sellers
+- Chat, submit sale offers and loan requests, claim giveaways and respond to counteroffers
+- View and complete deals, return borrowed items, search completed history and rate sellers
+- Receive borrowing reminders and activity notifications, and report listings to an admin
 
 ### Seller Portal
 - Registration, Login, Create Listing, My Listings
@@ -100,6 +103,7 @@ mvn clean compile javafx:run
 - **Manage All Listings** — view every status, edit any listing, add on behalf of an
   active seller, take down a live listing with a mandatory reason (notifies the seller
   and all buyers with active offers, cancels those offers)
+- **Reports** — review listing reports, open the reported listing, and record a resolution
 - **All Deals Record** — read-only oversight with keyword/type/status/date filters
 - **Seller Ratings Overview** — filter by user/score/date; hide/unhide ratings (hidden
   ratings are excluded from the public seller average)
@@ -226,3 +230,10 @@ Include `src/`, `pom.xml`, `mvnw`, `mvnw.cmd`, `.mvn/`, `run.sh`, `README.md` an
 ## Licence
 
 Educational use — HKUST COMP project skeleton.
+
+## Tests
+
+Run `mvnw.cmd clean verify` on Windows or `./mvnw clean verify` on macOS and Linux.
+JaCoCo writes the full branch-coverage report to `target/site/jacoco/index.html`.
+JavaFX navigation tests require a display. On a headless Linux machine, use
+`xvfb-run -a ./mvnw clean verify` to include them.

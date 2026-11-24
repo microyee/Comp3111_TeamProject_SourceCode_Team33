@@ -30,6 +30,7 @@ public class AdminDashboardController {
     @FXML private Button btnDeals;
     @FXML private Button btnRatings;
     @FXML private Button btnNotifications;
+    @FXML private Button btnReports;
     @FXML private Button btnProfile;
 
     private Button currentActiveBtn;
@@ -96,6 +97,7 @@ public class AdminDashboardController {
             case "USERS" -> showUsers(relatedId);
             case "DEALS" -> showDeals();
             case "RATINGS" -> showRatings(relatedId);
+            case "REPORTS" -> showReports(relatedId);
             default -> showNotifications();
         }
     }
@@ -165,6 +167,16 @@ public class AdminDashboardController {
     // =====================================================================
     // Task 3.6 – Notification board
     // =====================================================================
+
+    @FXML
+    private void showReports() {
+        showReports(null);
+    }
+
+    private void showReports(String reportId) {
+        setActive(btnReports, "Moderation Reports");
+        setPane(new AdminReportsPane(this, reportId));
+    }
 
     @FXML
     private void showNotifications() {

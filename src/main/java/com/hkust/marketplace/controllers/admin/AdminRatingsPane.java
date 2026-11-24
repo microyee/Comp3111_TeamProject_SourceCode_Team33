@@ -143,6 +143,7 @@ final class AdminRatingsPane extends VBox {
     }
 
     private boolean matchesQuery(Rating review, String query) {
+        if (query.equalsIgnoreCase(review.getId())) return true;
         if (query.isEmpty()) return true;
         return contains(review.getSellerUsername(), query)
                 || contains(review.getBuyerUsername(), query)

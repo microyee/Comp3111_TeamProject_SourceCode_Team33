@@ -19,6 +19,7 @@ public class Rating {
     private int rating; // 1-5
     private String comment;
     private String sellerReply;
+    private LocalDateTime sellerReplyAt;
     private boolean hidden; // admin can hide
     private LocalDateTime createdAt;
 
@@ -51,6 +52,8 @@ public class Rating {
     public String getSellerReply() { return sellerReply; }
     public void setSellerReply(String sellerReply) { this.sellerReply = sellerReply; }
 
+    public LocalDateTime getSellerReplyAt() { return sellerReplyAt; }
+    public void setSellerReplyAt(LocalDateTime at) { sellerReplyAt = at; }
     public boolean isHidden() { return hidden; }
     public void setHidden(boolean hidden) { this.hidden = hidden; }
 

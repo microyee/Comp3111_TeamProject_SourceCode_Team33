@@ -3,8 +3,8 @@
 A **JavaFX + Maven** campus marketplace application for the COMP3111 group project.
 
 The project uses an in-memory data store (`DummyDataService`) so it runs without a
-database or network connection. The buyer branch completes the Buyer portal and connects
-it to the Admin portal. The Seller portal on this branch still has its original demo screens. See
+database or network connection. Buyer, Seller and Admin share their listings, requests,
+chats, deals, ratings and notifications during the current application session. See
 [`ADMIN_TASK3.md`](ADMIN_TASK3.md) for the feature-by-feature mapping and demo script.
 
 ## Prerequisites
@@ -91,8 +91,12 @@ mvn clean compile javafx:run
 - Receive borrowing reminders and activity notifications, and report listings to an admin
 
 ### Seller Portal
-- Registration, Login, Create Listing, My Listings
-- Seller Stats (charts), Reviews & Feedback, Notifications, Profile
+- Register, log in, manage profile and change password
+- Submit sale, lending and giveaway listings with up to six photos
+- Edit and resubmit eligible listings, remove listings, and mark sales as sold
+- Review, accept, decline and counter buyer requests, and communicate in private chats
+- View real listing and deal statistics, reply to reviews and flag feedback for moderation
+- Receive notifications when listings are reviewed, including any rejection reason
 
 ### Admin Portal (Task 3 — complete)
 - **Login** with the seeded admin credential; buyer/seller credentials are rejected
@@ -103,7 +107,7 @@ mvn clean compile javafx:run
 - **Manage All Listings** — view every status, edit any listing, add on behalf of an
   active seller, take down a live listing with a mandatory reason (notifies the seller
   and all buyers with active offers, cancels those offers)
-- **Reports** — review listing reports, open the reported listing, and record a resolution
+- **Reports** — review listing and rating reports, open the reported item, and record a resolution
 - **All Deals Record** — read-only oversight with keyword/type/status/date filters
 - **Seller Ratings Overview** — filter by user/score/date; hide/unhide ratings (hidden
   ratings are excluded from the public seller average)
@@ -237,3 +241,14 @@ Run `mvnw.cmd clean verify` on Windows or `./mvnw clean verify` on macOS and Lin
 JaCoCo writes the full branch-coverage report to `target/site/jacoco/index.html`.
 JavaFX navigation tests require a display. On a headless Linux machine, use
 `xvfb-run -a ./mvnw clean verify` to include them.
+
+## Try an end-to-end transaction
+
+1. Log in as a seller, submit a listing, then log out.
+2. Log in as the admin, approve the listing in **Listing Review**, then log out.
+3. Log in as a buyer, open the listing, send a request and log out.
+4. Log in as the seller, open **Incoming Requests**, accept or counter it, then log out.
+5. Return to the buyer portal. Accept a counteroffer if applicable, then complete the deal or return the loan from **My Deals**. Review the seller from **Deal History**.
+
+Leave the application open when switching roles. Marketplace data is held in memory
+and resets on restart. Listing photos are read from their selected local files.

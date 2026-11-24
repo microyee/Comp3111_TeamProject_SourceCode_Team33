@@ -111,10 +111,6 @@ public class Listing {
     }
 
     public String getTypeDisplay() {
-        return switch (type) {
-            case SELL -> "For Sale";
-            case LEND -> "For Lending";
-            case GIVEAWAY -> "Giveaway";
-        };
+        return type.toString();
     }
 }

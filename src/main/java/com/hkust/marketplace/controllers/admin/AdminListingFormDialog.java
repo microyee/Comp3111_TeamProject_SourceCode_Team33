@@ -1,5 +1,6 @@
 package com.hkust.marketplace.controllers.admin;
 
+import com.hkust.marketplace.models.Deal;
 import com.hkust.marketplace.models.Listing;
 import com.hkust.marketplace.models.ListingStatus;
 import com.hkust.marketplace.models.ListingType;
@@ -18,6 +19,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.control.Tooltip;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -126,6 +128,10 @@ final class AdminListingFormDialog extends Dialog<Listing> {
         // ---- prefill for edit -------------------------------------------
         if (existing != null) {
             typeCombo.setValue(typeLabel(existing.getType()));
+            if (hasActiveTransaction()) {
+                typeCombo.setDisable(true);
+                typeCombo.setTooltip(new Tooltip("Resolve active requests and deals before changing the listing type."));
+            }
             titleField.setText(existing.getTitle());
             categoryCombo.setValue(existing.getCategory());
             conditionCombo.setValue(existing.getCondition());
@@ -271,6 +277,9 @@ final class AdminListingFormDialog extends Dialog<Listing> {
         if (typeCombo.getValue() == null) {
             return fail("Choose a listing type.");
         }
+        if (existing != null && selectedType() != existing.getType() && hasActiveTransaction()) {
+            return fail("Resolve active requests and deals before changing the listing type.");
+        }
         String title = titleField.getText() == null ? "" : titleField.getText().trim();
         if (title.isEmpty()) {
             return fail("Item name is required.");
@@ -332,6 +341,12 @@ final class AdminListingFormDialog extends Dialog<Listing> {
             }
         }
         return true;
+    }
+
+    private boolean hasActiveTransaction() {
+        DummyDataService data = DummyDataService.getInstance();
+        return !data.getActiveRequestsForListing(existing.getId()).isEmpty()
+                || data.getDealsForListing(existing.getId()).stream().anyMatch(Deal::isActiveOffer);
     }
 
     private boolean fail(String message) {

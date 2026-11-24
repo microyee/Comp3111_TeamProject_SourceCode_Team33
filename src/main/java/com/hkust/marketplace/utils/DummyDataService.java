@@ -11,6 +11,8 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Locale;
+import java.util.function.Supplier;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -28,7 +30,7 @@ import java.util.stream.Collectors;
  */
 public class DummyDataService {
 
-    private static final DummyDataService INSTANCE = new DummyDataService();
+
 
     /** Username of the seeded administrator account. */
     public static final String ADMIN_USERNAME = "admin";
@@ -82,13 +84,24 @@ public class DummyDataService {
             "New", "Like New", "Used", "For Parts"
     );
 
-    private DummyDataService() {
-        seedData();
+    private static final class Singleton {
+        private static final DummyDataService INSTANCE = new DummyDataService(true, LocalDateTime::now);
+    }
+
+    private final MarketplaceCatalog catalog = new MarketplaceCatalog(this);
+    private final MarketplaceActivity activity;
+
+    DummyDataService(boolean seed, Supplier<LocalDateTime> time) {
+        activity = new MarketplaceActivity(this, time);
+        if (seed) seedData();
     }
 
     public static DummyDataService getInstance() {
-        return INSTANCE;
+        return Singleton.INSTANCE;
     }
+
+    public MarketplaceCatalog catalog() { return catalog; }
+    public MarketplaceActivity activity() { return activity; }
 
     // =====================================================================
     // Seed data
@@ -141,7 +154,7 @@ public class DummyDataService {
                 "Good condition, LED bulb included.",
                 "Furniture", ListingType.GIVEAWAY, "Used", null, null,
                 "Hall 5 Lobby", "diana", "Diana Ng");
-        l3.setStatus(ListingStatus.LIVE);
+        l3.setStatus(ListingStatus.RESERVED);
         l3.setPostedAt(LocalDateTime.now().minusDays(3));
         listings.put(l3.getId(), l3);
 
@@ -179,6 +192,12 @@ public class DummyDataService {
         l7.setPostedAt(LocalDateTime.now().minusDays(28));
         l7.setReviewedAt(LocalDateTime.now().minusDays(27));
         listings.put(l7.getId(), l7);
+
+        Listing giveaway = createListing("Ceramic Coffee Mug", "Clean mug, available for collection at the Library.",
+                "Kitchenware", ListingType.GIVEAWAY, "Like New", null, null,
+                "Library", "charlie", "Charlie Lee");
+        giveaway.setStatus(ListingStatus.LIVE);
+        addListing(giveaway);
 
         // Sample requests and the deals they create.  Every seeded deal has a
         // corresponding Request, matching the UML Request 1 — 0..1 Deal relationship.
@@ -220,7 +239,7 @@ public class DummyDataService {
         Deal d8 = createDeal(r8, "Returned", now.minusDays(30));
 
         // Sample ratings.  One hidden rating demonstrates the moderation workflow.
-        addSeedRating(d1.getId(), "charlie", "bob", "Calculus Textbook (Stewart)", 5,
+        addSeedRating(null, "charlie", "bob", "Calculus Textbook (Stewart)", 5,
                 "Very smooth transaction, book in excellent condition!", null,
                 now.minusDays(18), false);
         addSeedRating(null, "charlie", "alice", "Calculus Textbook (Stewart)", 5,
@@ -252,9 +271,9 @@ public class DummyDataService {
         chat.setBuyerUsername("alice");
         chat.setSellerUsername("charlie");
         chat.setCreatedAt(now.minusDays(4));
-        addSeedMessage(chat, "alice", "Hi Charlie, is the textbook still available?",
+        addMessage(chat, "alice", "Hi Charlie, is the textbook still available?",
                 now.minusDays(4));
-        addSeedMessage(chat, "charlie", "Yes, it is. Are you free to meet at the Library?",
+        addMessage(chat, "charlie", "Yes, it is. Are you free to meet at the Library?",
                 now.minusDays(4).plusMinutes(5));
         chats.add(chat);
 
@@ -279,9 +298,8 @@ public class DummyDataService {
         addNotification(new Notification(ADMIN_USERNAME, "New Listing Submitted",
                 "Diana Ng submitted 'Mini Fridge' for review.",
                 "Submission", "REVIEW", l5.getId()));
-        addNotification(new Notification(ADMIN_USERNAME, "Listing Reported",
-                "Bob Wong reported 'MacBook Pro Charger 61W' for a misleading condition description.",
-                "Report", "LISTINGS", l2.getId()));
+        catalog.fileReport(buyer2, Report.Target.LISTING, l2.getId(), l2.getTitle(),
+                "Misleading condition description.");
         addNotification(new Notification(ADMIN_USERNAME, "User Account Updated",
                 "Seller charlie updated their preferred meet-up location to Library.",
                 "Account", "USERS", "charlie"));
@@ -326,7 +344,7 @@ public class DummyDataService {
         return request;
     }
 
-    private Deal createDeal(Request request, String status, LocalDateTime completedAt) {
+    Deal createDeal(Request request, String status, LocalDateTime completedAt) {
         Deal deal = new Deal();
         deal.setId("D" + dealIdCounter.getAndIncrement());
         deal.setRequestId(request.getId());
@@ -337,8 +355,9 @@ public class DummyDataService {
         deal.setDealType(request.getType());
         deal.setStatus(status);
         deal.setOfferPrice(request.getOfferPrice());
-        deal.setBorrowStart(request.getBorrowStart());
-        deal.setBorrowEnd(request.getBorrowEnd());
+        deal.setBorrowStartAt(request.getBorrowStartAt());
+        deal.setBorrowEndAt(request.getBorrowEndAt());
+        deal.setCategory(findListing(request.getListingId()).getCategory());
         deal.setCreatedAt(request.getCreatedAt());
         deal.setCompletedAt(completedAt);
         deals.add(deal);
@@ -362,7 +381,7 @@ public class DummyDataService {
         ratings.add(r);
     }
 
-    private void addSeedMessage(Chat chat, String sender, String content, LocalDateTime sentAt) {
+    void addMessage(Chat chat, String sender, String content, LocalDateTime sentAt) {
         Message message = new Message(sender, content);
         message.setId("M" + messageIdCounter.getAndIncrement());
         message.setSentAt(sentAt);
@@ -387,20 +406,20 @@ public class DummyDataService {
 
     public boolean usernameExists(String username) {
         if (username == null) return false;
-        return users.containsKey(username.trim().toLowerCase());
+        return users.containsKey(username.trim().toLowerCase(Locale.ROOT));
     }
 
     public User findUser(String username) {
         if (username == null) return null;
-        return users.get(username.trim().toLowerCase());
+        return users.get(username.trim().toLowerCase(Locale.ROOT));
     }
 
-    public void registerUser(User user) {
-        users.put(user.getUsername().toLowerCase(), user);
+    public synchronized void registerUser(User user) {
+        users.put(user.getUsername().toLowerCase(Locale.ROOT), user);
     }
 
-    public void updateUser(User user) {
-        users.put(user.getUsername().toLowerCase(), user);
+    public synchronized void updateUser(User user) {
+        users.put(user.getUsername().toLowerCase(Locale.ROOT), user);
         // Listings keep a denormalised seller name for display; keep it in sync when an
         // administrator edits the seller's full name.
         for (Listing listing : listings.values()) {
@@ -429,11 +448,12 @@ public class DummyDataService {
      * Deactivates an account.  The user cannot log in and their live listings disappear
      * from the marketplace (they are retained and reappear on reactivation).
      */
-    public boolean deactivateUser(String username, String actor) {
+    public synchronized boolean deactivateUser(String username, String actor) {
         User user = findUser(username);
-        if (user == null || user.isDeleted() || !user.isActive()) return false;
+        if (user == null || user.isDeleted() || !user.isActive() || user.getRole() == UserRole.ADMIN) return false;
 
         user.setActive(false);
+        activity.cancelUnavailable(user);
         SessionManager.logoutIf(user.getUsername());
 
         addNotification(new Notification(user.getUsername(), "Account Deactivated",
@@ -448,7 +468,7 @@ public class DummyDataService {
     }
 
     /** Reactivates a previously deactivated account. */
-    public boolean reactivateUser(String username, String actor) {
+    public synchronized boolean reactivateUser(String username, String actor) {
         User user = findUser(username);
         if (user == null || user.isDeleted() || user.isActive()) return false;
 
@@ -472,7 +492,7 @@ public class DummyDataService {
      * audit trail stay intact.  Active deals involving the account are cancelled and
      * the counterparties are notified.</p>
      */
-    public boolean deleteUser(String username, String actor) {
+    public synchronized boolean deleteUser(String username, String actor) {
         User user = findUser(username);
         if (user == null || user.isDeleted() || user.getRole() == UserRole.ADMIN) return false;
 
@@ -494,41 +514,7 @@ public class DummyDataService {
             }
         }
 
-        for (Request request : requests) {
-            if (!request.isActive()) continue;
-            boolean involvesUser = user.getUsername().equalsIgnoreCase(request.getBuyerUsername())
-                    || user.getUsername().equalsIgnoreCase(request.getSellerUsername());
-            if (!involvesUser) continue;
-
-            request.setStatus("Cancelled");
-            request.setRespondedAt(now);
-
-            if (findDealForRequest(request.getId()) == null) {
-                String counterparty = user.getUsername().equalsIgnoreCase(request.getBuyerUsername())
-                        ? request.getSellerUsername() : request.getBuyerUsername();
-                addNotification(new Notification(counterparty, "Request Cancelled",
-                        "The request for '" + request.getListingTitle() + "' was cancelled because "
-                                + "the account @" + user.getUsername() + " was deleted.",
-                        "Offer"));
-            }
-        }
-
-        for (Deal deal : deals) {
-            if (!deal.isActiveOffer()) continue;
-            boolean involvesUser = user.getUsername().equalsIgnoreCase(deal.getBuyerUsername())
-                    || user.getUsername().equalsIgnoreCase(deal.getSellerUsername());
-            if (!involvesUser) continue;
-
-            deal.setStatus("Cancelled");
-            deal.setCancelledAt(now);
-
-            String counterparty = user.getUsername().equalsIgnoreCase(deal.getBuyerUsername())
-                    ? deal.getSellerUsername() : deal.getBuyerUsername();
-            addNotification(new Notification(counterparty, "Deal Cancelled",
-                    "The deal for '" + deal.getListingTitle() + "' was cancelled because the "
-                            + "account @" + user.getUsername() + " was deleted.",
-                    "Offer", "DEALS", deal.getId()));
-        }
+        activity.cancelUnavailable(user);
 
         addNotification(new Notification(actor, "User Deleted",
                 "@" + user.getUsername() + " (" + user.getFullName() + ") was soft-deleted. "
@@ -581,24 +567,24 @@ public class DummyDataService {
         return id == null ? null : listings.get(id);
     }
 
-    public void addListing(Listing listing) {
+    public synchronized void addListing(Listing listing) {
         if (listing.getId() == null) {
             listing.setId("L" + listingIdCounter.getAndIncrement());
         }
         listings.put(listing.getId(), listing);
     }
 
-    public void updateListing(Listing listing) {
+    public synchronized void updateListing(Listing listing) {
         listings.put(listing.getId(), listing);
     }
 
     /** Hard removal, used by seller-side demo screens.  Admin take-down uses REMOVED. */
-    public void removeListing(String id) {
+    public synchronized void removeListing(String id) {
         listings.remove(id);
     }
 
     /** Approves a pending listing and publishes it to the marketplace. */
-    public boolean approveListing(String listingId, String actor) {
+    public synchronized boolean approveListing(String listingId, String actor) {
         Listing listing = findListing(listingId);
         if (listing == null || listing.getStatus() != ListingStatus.PENDING_REVIEW) {
             return false;
@@ -606,15 +592,19 @@ public class DummyDataService {
         listing.setStatus(ListingStatus.LIVE);
         listing.setReviewedAt(LocalDateTime.now());
         listing.setRejectionReason(null);
+        boolean visible = catalog.isPublic(listing);
+        String availability = visible ? "is now live in the marketplace."
+                : "will appear in the marketplace when your account is active.";
         addNotification(new Notification(listing.getSellerUsername(), "Listing Approved",
-                "Your listing '" + listing.getTitle() + "' is now live in the marketplace.",
+                "Your listing '" + listing.getTitle() + "' " + availability,
                 "System", "LISTINGS", listing.getId()));
+        if (visible) catalog.notifyFollowers(listing);
         logAudit(actor, "APPROVE_LISTING", "LISTING", listing.getId(), listing.getTitle());
         return true;
     }
 
     /** Rejects a pending listing.  The reason is stored and sent to the seller. */
-    public boolean rejectListing(String listingId, String reason, String actor) {
+    public synchronized boolean rejectListing(String listingId, String reason, String actor) {
         if (reason == null || reason.isBlank()) return false;
         Listing listing = findListing(listingId);
         if (listing == null || listing.getStatus() != ListingStatus.PENDING_REVIEW) {
@@ -637,7 +627,7 @@ public class DummyDataService {
      * @return the number of active offers cancelled, or -1 when the listing is missing
      *         or no longer live.
      */
-    public int takeDownListing(String listingId, String reason, String actor) {
+    public synchronized int takeDownListing(String listingId, String reason, String actor) {
         if (reason == null || reason.isBlank()) return -1;
         Listing listing = findListing(listingId);
         if (listing == null || listing.getStatus() != ListingStatus.LIVE) return -1;

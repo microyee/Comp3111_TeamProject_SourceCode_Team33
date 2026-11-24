@@ -42,7 +42,7 @@ final class AdminDealsPane extends VBox {
             FXCollections.observableArrayList("All Types", "Sell", "Lend", "Giveaway"));
     private final ComboBox<String> statusFilter = new ComboBox<>(
             FXCollections.observableArrayList(
-                    "All Statuses", "Pending", "Accepted", "Completed", "Returned", "Cancelled"));
+                    "All Statuses", "Pending", "Accepted", "Completed", "Returned", "Auto-returned", "Cancelled"));
     private final DatePicker fromDate = new DatePicker();
     private final DatePicker toDate = new DatePicker();
     private final Label summary = AdminUi.muted("");

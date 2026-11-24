@@ -102,7 +102,7 @@ public class Listing {
 
     public String getPriceDisplay() {
         if (type == ListingType.SELL && price != null) {
-            return String.format("HK$ %.0f", price);
+            return "HK$ " + java.math.BigDecimal.valueOf(price).stripTrailingZeros().toPlainString();
         } else if (type == ListingType.LEND) {
             return "Borrow";
         } else {

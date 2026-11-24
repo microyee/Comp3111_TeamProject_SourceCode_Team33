@@ -13,12 +13,26 @@ public class Deal {
     private ListingType dealType;
     private String status; // Pending, Accepted, Completed, Returned, Cancelled
     private Double offerPrice;
-    private LocalDate borrowStart;
-    private LocalDate borrowEnd;
+    private LocalDateTime borrowStart;
+    private LocalDateTime borrowEnd;
     private LocalDateTime createdAt;
     private LocalDateTime completedAt;
     private LocalDateTime cancelledAt;
     private boolean rated;
+    private boolean loanStarted;
+    private boolean reminderSent;
+    private String category;
+
+    public boolean isLoanStarted() { return loanStarted; }
+    public void setLoanStarted(boolean started) { loanStarted = started; }
+    public boolean isReminderSent() { return reminderSent; }
+    public void setReminderSent(boolean sent) { reminderSent = sent; }
+    public String getCategory() { return category; }
+    public void setCategory(String value) { category = value; }
+
+    public boolean isFinished() {
+        return "Completed".equals(status) || "Returned".equals(status) || "Auto-returned".equals(status);
+    }
 
     public Deal() {
         this.createdAt = LocalDateTime.now();
@@ -54,11 +68,17 @@ public class Deal {
     public Double getOfferPrice() { return offerPrice; }
     public void setOfferPrice(Double offerPrice) { this.offerPrice = offerPrice; }
 
-    public LocalDate getBorrowStart() { return borrowStart; }
-    public void setBorrowStart(LocalDate borrowStart) { this.borrowStart = borrowStart; }
+    public LocalDate getBorrowStart() { return borrowStart == null ? null : borrowStart.toLocalDate(); }
+    public void setBorrowStart(LocalDate borrowStart) { this.borrowStart = borrowStart == null ? null : borrowStart.atStartOfDay(); }
 
-    public LocalDate getBorrowEnd() { return borrowEnd; }
-    public void setBorrowEnd(LocalDate borrowEnd) { this.borrowEnd = borrowEnd; }
+    public LocalDate getBorrowEnd() { return borrowEnd == null ? null : borrowEnd.toLocalDate(); }
+    public void setBorrowEnd(LocalDate borrowEnd) { this.borrowEnd = borrowEnd == null ? null : borrowEnd.atStartOfDay(); }
+
+    public LocalDateTime getBorrowStartAt() { return borrowStart; }
+    public void setBorrowStartAt(LocalDateTime time) { this.borrowStart = time; }
+
+    public LocalDateTime getBorrowEndAt() { return borrowEnd; }
+    public void setBorrowEndAt(LocalDateTime time) { this.borrowEnd = time; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

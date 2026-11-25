@@ -7,6 +7,16 @@ database or network connection. Buyer, Seller and Admin share their listings, re
 chats, deals, ratings and notifications during the current application session. See
 [`ADMIN_TASK3.md`](ADMIN_TASK3.md) for the feature-by-feature mapping and demo script.
 
+## Project documentation
+
+- [Sprint 2 Project Management Pack — PDF](COMP3111_Team33_Sprint2_Project_Management.pdf)
+- [Sprint 2 Project Management Pack — editable Word version](COMP3111_Team33_Sprint2_Project_Management.docx)
+
+The pack contains four Scrum meeting minutes, the Gantt chart, the Sprint 2 backlog,
+the burndown chart, a representative Git commit log, outcome/verification evidence and
+UI screenshots. The Word file is editable, with native Word tables for the minutes,
+Gantt chart and backlog.
+
 ## Prerequisites
 
 1. **JDK 17 or newer** (full JDK, not only JRE)

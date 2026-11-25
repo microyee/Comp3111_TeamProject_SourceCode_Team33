@@ -7,6 +7,7 @@ import com.hkust.marketplace.utils.MarketplaceAccounts;
 import com.hkust.marketplace.utils.SceneManager;
 import com.hkust.marketplace.utils.SessionManager;
 import javafx.fxml.FXML;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
@@ -16,6 +17,14 @@ public class SellerLoginController {
     @FXML private TextField usernameField;
     @FXML private PasswordField passwordField;
     @FXML private Label errorLabel;
+    @FXML private Button loginButton;
+
+    @FXML
+    public void initialize() {
+        if (loginButton != null) loginButton.setDefaultButton(true);
+        usernameField.setOnAction(event -> passwordField.requestFocus());
+        passwordField.setOnAction(event -> handleLogin());
+    }
 
     @FXML
     private void handleLogin() {

@@ -37,10 +37,14 @@ public class AdminLoginController {
                             || passwordField.getText().isEmpty(),
                     usernameField.textProperty(), passwordField.textProperty());
             loginButton.disableProperty().bind(fieldsEmpty);
+            loginButton.setDefaultButton(true);
             if (requiredHint != null) {
                 requiredHint.visibleProperty().bind(fieldsEmpty);
                 requiredHint.managedProperty().bind(fieldsEmpty);
             }
+        }
+        if (usernameField != null) {
+            usernameField.setOnAction(event -> passwordField.requestFocus());
         }
         if (passwordField != null) {
             passwordField.setOnAction(event -> {

@@ -1,5 +1,6 @@
 package com.hkust.marketplace.utils;
 
+import com.hkust.marketplace.controllers.UiAnimations;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -40,6 +41,7 @@ public class SceneManager {
             System.out.println("[SceneManager] Loading: " + resource);
             FXMLLoader loader = new FXMLLoader(resource);
             Parent root = loader.load();
+            UiAnimations.fadeIn(root);
 
             Scene scene = primaryStage.getScene();
             if (scene == null) {

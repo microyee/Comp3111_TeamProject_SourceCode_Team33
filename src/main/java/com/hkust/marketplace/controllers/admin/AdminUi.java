@@ -1,6 +1,7 @@
 package com.hkust.marketplace.controllers.admin;
 
 import com.hkust.marketplace.models.ListingStatus;
+import com.hkust.marketplace.utils.ImageSupport;
 import com.hkust.marketplace.models.UserRole;
 import com.hkust.marketplace.utils.SceneManager;
 import javafx.geometry.Insets;
@@ -8,16 +9,12 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
-import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
-import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Window;
 
-import java.io.File;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -241,36 +238,11 @@ final class AdminUi {
     }
 
     /**
-     * Builds a thumbnail for a stored photo path.  Photo files are user-selected local
-     * files in this demo, so missing/unreadable files fall back to a neutral tile.
+     * Builds a thumbnail for a stored photo path.  Paths may be classpath resources
+     * (generated demo photos) or local files chosen by a seller/admin.
      */
     static Node photoThumb(String path, double width, double height) {
-        StackPane tile = new StackPane();
-        tile.setPrefSize(width, height);
-        tile.setMinSize(width, height);
-        tile.setStyle("-fx-background-color: #eef2f7; -fx-background-radius: 8; -fx-padding: 3;");
-
-        if (path == null || path.isBlank() || !new File(path).isFile()) {
-            Label missing = new Label("No image");
-            missing.setStyle("-fx-text-fill: #9aa0b0; -fx-font-size: 10px;");
-            tile.getChildren().add(missing);
-            return tile;
-        }
-
-        Image image = new Image(new File(path).toURI().toString(), width, height, true, true, true);
-        if (image.isError()) {
-            Label missing = new Label("Unreadable");
-            missing.setStyle("-fx-text-fill: #9aa0b0; -fx-font-size: 10px;");
-            tile.getChildren().add(missing);
-            return tile;
-        }
-
-        ImageView view = new ImageView(image);
-        view.setFitWidth(width);
-        view.setFitHeight(height);
-        view.setPreserveRatio(true);
-        tile.getChildren().add(view);
-        return tile;
+        return ImageSupport.thumbnail(path, width, height);
     }
 
     static Window window(Node node) {

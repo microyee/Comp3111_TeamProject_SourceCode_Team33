@@ -82,6 +82,12 @@ mvn clean compile javafx:run
 - Domain model follows the Activity 1 UML: abstract `User` with `Buyer`, `Seller` and
   `Admin` subclasses; `Request` linked to `Deal`; `Rating`; `Chat` composed of
   `Message`; `Listing`; `Notification`
+- Real listing photographs (Flickr/Openverse), photo-card marketplace grid, animated
+  page transitions, hover-lift cards, loading indicators and pulsing unread badges
+- Clickable photo thumbnails open a zoomable viewer (wheel/buttons, previous/next);
+  seller and admin listing rows/cards open the edit form on click
+- All login screens support keyboard login: Enter in the username field moves to the
+  password field, and Enter in the password field submits the form
 
 ### Buyer Portal
 - Register, log in, manage profile and change password
@@ -152,6 +158,7 @@ HKUST-Marketplace/
 ├── mvnw / mvnw.cmd          ← Maven Wrapper (use these!)
 ├── pom.xml
 ├── README.md
+├── CREDITS.md              ← real photo sources and licences
 └── src/main/
     ├── java/com/hkust/marketplace/
     │   ├── MarketplaceApp.java
@@ -161,7 +168,9 @@ HKUST-Marketplace/
     └── resources/
         ├── fxml/
         ├── css/styles.css
-        └── images/hkust_logo.png
+        └── images/
+            ├── hkust_logo.png
+            └── listings/        ← real listing photographs (see CREDITS.md)
 ```
 
 ## Troubleshooting
@@ -225,10 +234,15 @@ See [`ADMIN_TASK3.md`](ADMIN_TASK3.md) for:
   reasons, invalid date ranges, deleted related items, password failures),
 - a step-by-step demo script for the admin portal.
 
+## Photo credits
+
+The listing photographs are real photos sourced from Flickr via Openverse.  See
+[`CREDITS.md`](CREDITS.md) for each photo's title, creator, licence and source URL.
+
 ## Submission ZIP
 
-Include `src/`, `pom.xml`, `mvnw`, `mvnw.cmd`, `.mvn/`, `run.sh`, `README.md` and
-`ADMIN_TASK3.md`.  Exclude generated/restricted-environment caches: `target/`,
+Include `src/`, `pom.xml`, `mvnw`, `mvnw.cmd`, `.mvn/`, `run.sh`, `README.md`, `ADMIN_TASK3.md` and
+`CREDITS.md`.  Exclude generated/restricted-environment caches: `target/`,
 `.mvn-home/`, `.m2-repository/`, `.DS_Store` and IDE folders.
 
 ## Licence

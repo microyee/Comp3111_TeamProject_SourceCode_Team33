@@ -187,6 +187,7 @@ final class AdminUsersPane extends VBox {
         actions.setAlignment(Pos.CENTER_RIGHT);
 
         row.getChildren().addAll(avatar, identity, actions);
+        com.hkust.marketplace.controllers.UiAnimations.hoverLift(row);
         return row;
     }
 

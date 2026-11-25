@@ -1,5 +1,7 @@
 package com.hkust.marketplace.controllers.admin;
 
+import com.hkust.marketplace.controllers.UiAnimations;
+
 import com.hkust.marketplace.models.User;
 import com.hkust.marketplace.utils.DummyDataService;
 import com.hkust.marketplace.utils.SceneManager;
@@ -63,7 +65,7 @@ public class AdminDashboardController {
     }
 
     private void setPane(Node pane) {
-        contentPane.getChildren().setAll(pane);
+        UiAnimations.showPane(contentPane, pane);
     }
 
     public void refreshWelcome() {
@@ -83,6 +85,7 @@ public class AdminDashboardController {
         unreadLabel.setText(unread > 0 ? "🔔 " + unread + " unread" : "All notifications read");
         unreadLabel.setVisible(true);
         unreadLabel.setManaged(true);
+        if (unread > 0) UiAnimations.pulse(unreadLabel);
     }
 
     /** Navigation target used by the notification board. */

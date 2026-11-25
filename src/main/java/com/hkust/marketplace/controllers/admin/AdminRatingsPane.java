@@ -215,6 +215,7 @@ final class AdminRatingsPane extends VBox {
         footer.setAlignment(Pos.CENTER_LEFT);
 
         card.getChildren().addAll(top, details, footer);
+        com.hkust.marketplace.controllers.UiAnimations.hoverLift(card);
         return card;
     }
 

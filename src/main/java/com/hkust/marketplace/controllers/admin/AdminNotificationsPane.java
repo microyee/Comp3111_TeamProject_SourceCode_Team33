@@ -118,6 +118,7 @@ final class AdminNotificationsPane extends VBox {
         badges.setAlignment(Pos.CENTER_RIGHT);
 
         row.getChildren().addAll(unreadDot, body, badges);
+        com.hkust.marketplace.controllers.UiAnimations.hoverLift(row);
         return row;
     }
 

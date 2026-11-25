@@ -1,5 +1,6 @@
 package com.hkust.marketplace.controllers.admin;
 
+import com.hkust.marketplace.controllers.PhotoViewer;
 import com.hkust.marketplace.models.Deal;
 import com.hkust.marketplace.models.Listing;
 import com.hkust.marketplace.models.ListingStatus;
@@ -219,10 +220,18 @@ final class AdminListingFormDialog extends Dialog<Listing> {
         if (photos.isEmpty()) {
             photoPane.getChildren().add(AdminUi.muted("No photos selected."));
         } else {
-            for (String path : photos) {
+            List<String> gallery = new ArrayList<>(photos);
+            for (int i = 0; i < gallery.size(); i++) {
+                String path = gallery.get(i);
                 VBox tile = new VBox(4);
                 tile.setAlignment(Pos.CENTER);
-                tile.getChildren().add(AdminUi.photoThumb(path, 96, 68));
+                Node thumb = AdminUi.photoThumb(path, 96, 68);
+                int index = i;
+                thumb.setOnMouseClicked(event -> {
+                    PhotoViewer.show(thumb, gallery, index, "Listing photos");
+                    event.consume();
+                });
+                tile.getChildren().add(thumb);
 
                 Label name = new Label(new File(path).getName());
                 name.setStyle("-fx-font-size: 10px; -fx-text-fill: #5a5a7a;");

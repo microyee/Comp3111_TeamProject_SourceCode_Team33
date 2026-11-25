@@ -1,26 +1,32 @@
 package com.hkust.marketplace.controllers.admin;
 
+import com.hkust.marketplace.controllers.PhotoViewer;
 import com.hkust.marketplace.models.Listing;
 import com.hkust.marketplace.models.ListingStatus;
 import com.hkust.marketplace.models.Notification;
 import com.hkust.marketplace.models.User;
 import com.hkust.marketplace.utils.DummyDataService;
+import com.hkust.marketplace.utils.ImageSupport;
 import com.hkust.marketplace.utils.SessionManager;
+import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.collections.FXCollections;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.control.Tooltip;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
+import javafx.scene.input.MouseButton;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -92,16 +98,53 @@ final class AdminListingsPane extends VBox {
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
         table.setPlaceholder(AdminUi.emptyState("No listings match",
                 "Clear the filters or add a listing on behalf of a seller."));
+        table.setRowFactory(tableView -> {
+            TableRow<Listing> row = new TableRow<>();
+            row.getStyleClass().add("clickable-row");
+            row.setOnMouseClicked(event -> {
+                if (event.getButton() == MouseButton.PRIMARY && event.getClickCount() == 1
+                        && !row.isEmpty() && !PhotoViewer.isInteractiveTarget(event.getTarget())) {
+                    Listing clicked = row.getItem();
+                    Platform.runLater(() -> editListing(clicked));
+                }
+            });
+            return row;
+        });
 
-        TableColumn<Listing, String> title = column("Title", Listing::getTitle, 120);
+        TableColumn<Listing, String> photo = new TableColumn<>("Photo");
+        photo.setPrefWidth(62);
+        photo.setMinWidth(62);
+        photo.setCellValueFactory(cell -> new ReadOnlyObjectWrapper<>(
+                cell.getValue().getPhotoPaths().isEmpty() ? "" : cell.getValue().getPhotoPaths().get(0)));
+        photo.setCellFactory(column -> new TableCell<>() {
+            @Override
+            protected void updateItem(String path, boolean empty) {
+                super.updateItem(path, empty);
+                setText(null);
+                if (empty || path == null) {
+                    setGraphic(null);
+                    return;
+                }
+                Node thumb = ImageSupport.thumbnail(path, 52, 40);
+                Listing listing = getTableView().getItems().get(getIndex());
+                int index = Math.max(0, listing.getPhotoPaths().indexOf(path));
+                thumb.setOnMouseClicked(event -> {
+                    PhotoViewer.show(thumb, listing.getPhotoPaths(), index, listing.getTitle());
+                    event.consume();
+                });
+                setGraphic(thumb);
+            }
+        });
+
+        TableColumn<Listing, String> title = column("Title", Listing::getTitle, 112);
         TableColumn<Listing, String> seller = column("Seller",
-                listing -> listing.getSellerFullName() + " (@" + listing.getSellerUsername() + ")", 105);
-        TableColumn<Listing, String> type = column("Type", Listing::getTypeDisplay, 85);
-        TableColumn<Listing, String> category = column("Category", Listing::getCategory, 90);
-        TableColumn<Listing, String> price = column("Price", Listing::getPriceDisplay, 85);
+                listing -> listing.getSellerFullName() + " (@" + listing.getSellerUsername() + ")", 98);
+        TableColumn<Listing, String> type = column("Type", Listing::getTypeDisplay, 78);
+        TableColumn<Listing, String> category = column("Category", Listing::getCategory, 82);
+        TableColumn<Listing, String> price = column("Price", Listing::getPriceDisplay, 78);
         TableColumn<Listing, ListingStatus> status = new TableColumn<>("Status");
-        status.setPrefWidth(110);
-        status.setMinWidth(110);
+        status.setPrefWidth(104);
+        status.setMinWidth(104);
         status.setCellValueFactory(cell -> new ReadOnlyObjectWrapper<>(cell.getValue().getStatus()));
         status.setCellFactory(column -> new TableCell<>() {
             @Override
@@ -115,9 +158,7 @@ final class AdminListingsPane extends VBox {
 
         TableColumn<Listing, String> posted = column("Posted",
                 listing -> AdminUi.formatDate(listing.getPostedAt() == null
-                        ? null : listing.getPostedAt().toLocalDate()), 80);
-        TableColumn<Listing, String> views = column("Views",
-                listing -> String.valueOf(listing.getViewCount()), 55);
+                        ? null : listing.getPostedAt().toLocalDate()), 76);
 
         TableColumn<Listing, Void> actions = new TableColumn<>("Actions");
         actions.setPrefWidth(190);
@@ -147,7 +188,7 @@ final class AdminListingsPane extends VBox {
             }
         });
 
-        table.getColumns().addAll(title, seller, type, category, price, status, posted, views, actions);
+        table.getColumns().addAll(photo, title, seller, type, category, price, status, posted, actions);
     }
 
     private static <T> TableColumn<Listing, T> column(

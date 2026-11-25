@@ -1,12 +1,15 @@
 package com.hkust.marketplace.controllers.admin;
 
+import com.hkust.marketplace.controllers.PhotoViewer;
 import com.hkust.marketplace.models.Listing;
 import com.hkust.marketplace.models.ListingStatus;
 import com.hkust.marketplace.models.User;
 import com.hkust.marketplace.utils.DummyDataService;
 import com.hkust.marketplace.utils.SessionManager;
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
@@ -109,8 +112,16 @@ final class AdminReviewPane extends VBox {
         if (listing.getPhotoPaths().isEmpty()) {
             photos.getChildren().add(AdminUi.muted("No photos uploaded."));
         } else {
-            for (String path : listing.getPhotoPaths()) {
-                photos.getChildren().add(AdminUi.photoThumb(path, 110, 76));
+            var photoPaths = listing.getPhotoPaths();
+            for (int i = 0; i < photoPaths.size(); i++) {
+                String path = photoPaths.get(i);
+                Node thumb = AdminUi.photoThumb(path, 110, 76);
+                int index = i;
+                thumb.setOnMouseClicked(event -> {
+                    PhotoViewer.show(thumb, photoPaths, index, listing.getTitle());
+                    event.consume();
+                });
+                photos.getChildren().add(thumb);
             }
         }
 
@@ -127,7 +138,30 @@ final class AdminReviewPane extends VBox {
 
         card.getChildren().addAll(titleRow, grid, descriptionTitle, description,
                 AdminUi.fieldLabel("Photos"), photos, actions);
+        com.hkust.marketplace.controllers.UiAnimations.hoverLift(card);
+        card.setOnMouseClicked(event -> {
+            if (!PhotoViewer.isInteractiveTarget(event.getTarget())) {
+                Platform.runLater(() -> editListing(listing));
+            }
+        });
         return card;
+    }
+
+    private void editListing(Listing listing) {
+        Listing current = data.findListing(listing.getId());
+        if (current == null) {
+            AdminDialogs.warn("Listing no longer available",
+                    "This listing was removed. The list has been refreshed.");
+            refresh();
+            return;
+        }
+        AdminListingFormDialog dialog = new AdminListingFormDialog(AdminUi.window(this), current, null);
+        dialog.showAndWait().ifPresent(updated -> {
+            data.updateListing(updated);
+            data.logAudit(adminUsername(), "EDIT_LISTING", "LISTING", updated.getId(), updated.getTitle());
+            refresh();
+            AdminDialogs.info("Listing updated", "The listing details were saved.");
+        });
     }
 
     private String priceAndDuration(Listing listing) {

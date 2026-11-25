@@ -1,15 +1,16 @@
 package com.hkust.marketplace.controllers.seller;
 
+import com.hkust.marketplace.controllers.PhotoViewer;
 import com.hkust.marketplace.models.Listing;
 import com.hkust.marketplace.models.ListingType;
 import com.hkust.marketplace.models.User;
 import com.hkust.marketplace.utils.DummyDataService;
+import com.hkust.marketplace.utils.ImageSupport;
 import com.hkust.marketplace.utils.SellerMarketplace;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -115,11 +116,17 @@ final class SellerListingForm {
     private static void renderPhotos(LinkedHashSet<String> photos, Label hint, FlowPane rows) {
         hint.setText("Photos (" + photos.size() + " / 6)");
         rows.getChildren().clear();
-        for (String path : photos) {
-            File file = new File(path);
-            Image image = new Image(file.toURI().toString(), 96, 72, true, true, false);
-            Node thumbnail = image.isError() ? label("Photo unavailable", "muted") : new ImageView(image);
-            rows.getChildren().add(new VBox(4, thumbnail, label(file.getName(), "muted"),
+        List<String> gallery = List.copyOf(photos);
+        for (int i = 0; i < gallery.size(); i++) {
+            String path = gallery.get(i);
+            String name = new File(path).getName();
+            Node tile = ImageSupport.thumbnail(path, 96, 72);
+            int index = i;
+            tile.setOnMouseClicked(event -> {
+                PhotoViewer.show(tile, gallery, index, "Listing photos");
+                event.consume();
+            });
+            rows.getChildren().add(new VBox(4, tile, label(name, "muted"),
                     button("Remove photo", "btn-outline", () -> {
                         photos.remove(path);
                         renderPhotos(photos, hint, rows);

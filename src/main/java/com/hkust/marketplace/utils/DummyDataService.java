@@ -138,6 +138,7 @@ public class DummyDataService {
                 "Barely used, 8th edition. Perfect for MATH 1013.",
                 "Textbooks", ListingType.SELL, "Like New", 180.0, null,
                 "Library", "charlie", "Charlie Lee");
+        attachPhotos(l1, "textbook-1.png", "textbook-2.png");
         l1.setStatus(ListingStatus.RESERVED);
         l1.setPostedAt(LocalDateTime.now().minusDays(6));
         listings.put(l1.getId(), l1);
@@ -146,6 +147,7 @@ public class DummyDataService {
                 "Original Apple charger, works perfectly.",
                 "Electronics", ListingType.SELL, "Used", 250.0, null,
                 "Academic Building (LG1)", "charlie", "Charlie Lee");
+        attachPhotos(l2, "charger-1.png");
         l2.setStatus(ListingStatus.LIVE);
         l2.setPostedAt(LocalDateTime.now().minusDays(4));
         listings.put(l2.getId(), l2);
@@ -154,6 +156,7 @@ public class DummyDataService {
                 "Good condition, LED bulb included.",
                 "Furniture", ListingType.GIVEAWAY, "Used", null, null,
                 "Hall 5 Lobby", "diana", "Diana Ng");
+        attachPhotos(l3, "lamp-1.png", "lamp-2.png");
         l3.setStatus(ListingStatus.RESERVED);
         l3.setPostedAt(LocalDateTime.now().minusDays(3));
         listings.put(l3.getId(), l3);
@@ -162,6 +165,7 @@ public class DummyDataService {
                 "Can lend for one semester. Includes USB cable.",
                 "Electronics", ListingType.LEND, "Like New", null, 90,
                 "Student Centre", "diana", "Diana Ng");
+        attachPhotos(l4, "calculator-1.png");
         l4.setStatus(ListingStatus.LIVE);
         l4.setPostedAt(LocalDateTime.now().minusDays(2));
         listings.put(l4.getId(), l4);
@@ -170,14 +174,16 @@ public class DummyDataService {
                 "Works well, cleaning required. Currently pending admin review.",
                 "Furniture", ListingType.SELL, "Used", 400.0, null,
                 "Hall 2 Lobby", "diana", "Diana Ng");
+        attachPhotos(l5, "fridge-1.png");
         l5.setStatus(ListingStatus.PENDING_REVIEW);
         l5.setPostedAt(LocalDateTime.now().minusHours(5));
         listings.put(l5.getId(), l5);
 
-        Listing l6 = createListing("Broken Desk Chair",
-                "Leg is cracked and the gas lift no longer holds height.",
+        Listing l6 = createListing("Broken Wooden Chair",
+                "One leg is cracked and the seat is unstable. Suitable for parts only.",
                 "Furniture", ListingType.SELL, "For Parts", 50.0, null,
                 "Hall 2 Lobby", "diana", "Diana Ng");
+        attachPhotos(l6, "chair-1.png");
         l6.setStatus(ListingStatus.REJECTED);
         l6.setRejectionReason("Safety risk: the broken leg is not clearly shown and the listing does not mention the gas-lift failure.");
         l6.setPostedAt(LocalDateTime.now().minusDays(9));
@@ -188,6 +194,7 @@ public class DummyDataService {
                 "Sturdy desk, assembled. Buyer must arrange transport.",
                 "Furniture", ListingType.SELL, "Used", 300.0, null,
                 "Hall 1 Lobby", "charlie", "Charlie Lee");
+        attachPhotos(l7, "desk-1.png");
         l7.setStatus(ListingStatus.SOLD);
         l7.setPostedAt(LocalDateTime.now().minusDays(28));
         l7.setReviewedAt(LocalDateTime.now().minusDays(27));
@@ -196,8 +203,36 @@ public class DummyDataService {
         Listing giveaway = createListing("Ceramic Coffee Mug", "Clean mug, available for collection at the Library.",
                 "Kitchenware", ListingType.GIVEAWAY, "Like New", null, null,
                 "Library", "charlie", "Charlie Lee");
+        attachPhotos(giveaway, "mug-1.png");
         giveaway.setStatus(ListingStatus.LIVE);
         addListing(giveaway);
+
+        Listing hub = createListing("Belkin 7-Port USB Hub",
+                "Silver Belkin hub with seven USB ports. Great for a desk setup with several accessories.",
+                "Electronics", ListingType.SELL, "Like New", 120.0, null,
+                "Library", "diana", "Diana Ng");
+        attachPhotos(hub, "hub-1.png");
+        hub.setStatus(ListingStatus.LIVE);
+        hub.setPostedAt(LocalDateTime.now().minusHours(7));
+        addListing(hub);
+
+        Listing yoga = createListing("Yoga Mat",
+                "Non-slip 6mm mat, lightly used. Can lend for up to 30 days.",
+                "Sports Equipment", ListingType.LEND, "Like New", null, 30,
+                "Sports Hall", "charlie", "Charlie Lee");
+        attachPhotos(yoga, "yoga-1.png");
+        yoga.setStatus(ListingStatus.LIVE);
+        yoga.setPostedAt(LocalDateTime.now().minusHours(9));
+        addListing(yoga);
+
+        Listing organizer = createListing("Desk Organizer",
+                "Wooden stationery organizer with two compartments. Free to a good home.",
+                "Stationery", ListingType.GIVEAWAY, "Used", null, null,
+                "Academic Building (LG1)", "diana", "Diana Ng");
+        attachPhotos(organizer, "organizer-1.png");
+        organizer.setStatus(ListingStatus.LIVE);
+        organizer.setPostedAt(LocalDateTime.now().minusHours(12));
+        addListing(organizer);
 
         // Sample requests and the deals they create.  Every seeded deal has a
         // corresponding Request, matching the UML Request 1 — 0..1 Deal relationship.
@@ -303,6 +338,15 @@ public class DummyDataService {
         addNotification(new Notification(ADMIN_USERNAME, "User Account Updated",
                 "Seller charlie updated their preferred meet-up location to Library.",
                 "Account", "USERS", "charlie"));
+    }
+
+    /** Attaches a generated demo photo set (classpath resources). */
+    private void attachPhotos(Listing listing, String... names) {
+        List<String> paths = new ArrayList<>();
+        for (String name : names) {
+            paths.add("/images/listings/" + name);
+        }
+        listing.setPhotoPaths(paths);
     }
 
     private Listing createListing(String title, String desc, String cat, ListingType type,

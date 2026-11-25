@@ -1,10 +1,13 @@
 package com.hkust.marketplace.controllers.seller;
 
 import com.hkust.marketplace.MarketplaceApp;
+import com.hkust.marketplace.controllers.PhotoViewer;
+import com.hkust.marketplace.controllers.UiAnimations;
 import com.hkust.marketplace.models.*;
 import com.hkust.marketplace.utils.*;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
+import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.chart.*;
 import javafx.scene.control.*;
@@ -53,6 +56,7 @@ public class SellerDashboardController {
         int count = data.getUnreadCount(seller.getUsername());
         unreadLabel.setText(count + " unread");
         unreadLabel.getStyleClass().setAll("badge", count == 0 ? "badge-live" : "badge-pending");
+        if (count > 0) UiAnimations.pulse(unreadLabel);
     }
 
     private void show(Button button, String title, Node page) {
@@ -61,7 +65,7 @@ public class SellerDashboardController {
         button.getStyleClass().add("sidebar-btn-active");
         active = button;
         pageTitle.setText(title);
-        contentPane.getChildren().setAll(page);
+        UiAnimations.showPane(contentPane, page);
         onLoanUpdate = () -> {};
         badge();
     }
@@ -101,13 +105,14 @@ public class SellerDashboardController {
 
     private Node listingRow(Listing listing, boolean highlight, Runnable refresh) {
         String id = listing.getId();
-        VBox row = card(label(listing.getTitle(), "section-title"),
+        VBox info = new VBox(7, label(listing.getTitle(), "section-title"),
                 label(listing.getTypeDisplay() + " · " + listing.getPriceDisplay() + " · " + listing.getCategory()
                         + " · " + listing.getCondition(), "label"),
                 label(listing.getStatus() + " · " + listing.getMeetupLocation() + " · " + listing.getViewCount() + " views", "muted"));
-        if (highlight) row.getStyleClass().add("notif-unread");
-        if (listing.getRejectionReason() != null) row.getChildren().add(label("Review reason: " + listing.getRejectionReason(), "error-text"));
-        if (listing.getRemovalReason() != null) row.getChildren().add(label("Removal reason: " + listing.getRemovalReason(), "muted"));
+        HBox.setHgrow(info, Priority.ALWAYS);
+        if (listing.getRejectionReason() != null) info.getChildren().add(label("Review reason: " + listing.getRejectionReason(), "error-text"));
+        if (listing.getRemovalReason() != null) info.getChildren().add(label("Removal reason: " + listing.getRemovalReason(), "muted"));
+
         HBox actions = new HBox(8, button("Incoming requests", "btn-outline", () -> showRequests(id, null)));
         if (marketplace.canEdit(seller, id)) {
             actions.getChildren().addAll(button("Edit", "btn-outline", () -> editListing(listing)),
@@ -126,8 +131,40 @@ public class SellerDashboardController {
                 }
             }));
         }
-        row.getChildren().add(actions);
+        info.getChildren().add(actions);
+
+        Node thumb = ImageSupport.firstPhoto(listing, 132, 96);
+        thumb.setOnMouseClicked(event -> {
+            PhotoViewer.show(thumb, listing.getPhotoPaths(), 0, listing.getTitle());
+            event.consume();
+        });
+        HBox row = new HBox(14, thumb, info);
+        row.getStyleClass().add("card");
+        row.setAlignment(Pos.CENTER_LEFT);
+        if (highlight) row.getStyleClass().add("notif-unread");
+        UiAnimations.hoverLift(row);
+        row.setOnMouseClicked(event -> {
+            if (PhotoViewer.isInteractiveTarget(event.getTarget())) return;
+            Platform.runLater(() -> {
+                if (marketplace.canEdit(seller, id)) {
+                    editListing(listing);
+                } else {
+                    showListingInfo(listing);
+                }
+            });
+        });
         return row;
+    }
+
+    private void showListingInfo(Listing listing) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        style(alert, contentPane);
+        alert.setTitle(listing.getTitle());
+        alert.setHeaderText(listing.getStatus().name().replace('_', ' '));
+        alert.setContentText("This listing can no longer be edited while it is "
+                + listing.getStatus().name().replace('_', ' ').toLowerCase() + "."
+                + (listing.getRemovalReason() == null ? "" : "\nReason: " + listing.getRemovalReason()));
+        alert.showAndWait();
     }
 
     @FXML
@@ -198,6 +235,7 @@ public class SellerDashboardController {
             }
         }
         row.getChildren().add(actions);
+        UiAnimations.hoverLift(row);
         return row;
     }
 

@@ -1,19 +1,20 @@
 package com.hkust.marketplace.controllers.buyer;
 
 import com.hkust.marketplace.MarketplaceApp;
+import com.hkust.marketplace.controllers.PhotoViewer;
+import com.hkust.marketplace.controllers.UiAnimations;
 import com.hkust.marketplace.models.*;
 import com.hkust.marketplace.utils.*;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.*;
-import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
 
-import java.io.File;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
@@ -56,6 +57,7 @@ public class BuyerDashboardController {
         int count = data.getUnreadCount(buyer.getUsername());
         unreadLabel.setText(count + " unread");
         unreadLabel.getStyleClass().setAll("badge", count == 0 ? "badge-live" : "badge-pending");
+        if (count > 0) UiAnimations.pulse(unreadLabel);
     }
 
     private void show(Button button, String title, Node page) {
@@ -64,7 +66,7 @@ public class BuyerDashboardController {
         button.getStyleClass().add("sidebar-btn-active");
         active = button;
         pageTitle.setText(title);
-        contentPane.getChildren().setAll(page);
+        UiAnimations.showPane(contentPane, page);
         onLoanUpdate = () -> {};
         badge();
     }
@@ -83,19 +85,25 @@ public class BuyerDashboardController {
         min.setPrefColumnCount(6);
         max.setPrefColumnCount(6);
         FlowPane filters = new FlowPane(8, 8, type, category, condition, min, max, sort);
-        VBox rows = new VBox(10);
+        FlowPane grid = new FlowPane(16, 16);
+        grid.setPrefWrapLength(900);
+        grid.setPadding(new Insets(4));
         Label validation = label("", "error-text");
         validation.visibleProperty().bind(validation.textProperty().isNotEmpty());
         validation.managedProperty().bind(validation.visibleProperty());
+        Label resultCount = label("", "muted");
+
         Runnable render = () -> {
             try {
                 var filter = new MarketplaceCatalog.Filter(search.getText(), type.getValue(), category.getValue(),
                         condition.getValue(), number(min.getText()), number(max.getText()), sort.getValue());
                 List<Listing> matches = catalog.browse(buyer, filter);
                 validation.setText("");
-                rows.getChildren().setAll(matches.stream().map(listing -> listingRow(listing,
-                        this::restoreBrowse)).toList());
-                if (matches.isEmpty()) rows.getChildren().add(label("No listings match these filters.", "muted"));
+                grid.getChildren().setAll(matches.stream()
+                        .map(listing -> listingCard(listing, this::restoreBrowse)).toList());
+                if (matches.isEmpty()) grid.getChildren().add(emptyBrowseState());
+                resultCount.setText(matches.size() + " item(s) available");
+                UiAnimations.staggerFadeIn(new ArrayList<>(grid.getChildren()));
             } catch (IllegalArgumentException e) {
                 validation.setText(e.getMessage());
             }
@@ -113,13 +121,76 @@ public class BuyerDashboardController {
             max.clear();
             sort.setValue(MarketplaceCatalog.Sort.NEWEST);
         });
-        VBox toolbar = new VBox(8, new HBox(8, search, clear), filters, validation);
+        HBox searchRow = new HBox(8, search, clear);
+        HBox.setHgrow(search, Priority.ALWAYS);
+        VBox toolbar = new VBox(8, searchRow, filters, new HBox(12, resultCount, validation));
         toolbar.getStyleClass().add("toolbar");
-        ScrollPane scroll = scroll(rows);
+        ScrollPane scroll = scroll(grid);
         VBox.setVgrow(scroll, Priority.ALWAYS);
         browsePage = new VBox(12, toolbar, scroll);
         browseRender = render;
         restoreBrowse();
+    }
+
+    private Node emptyBrowseState() {
+        VBox empty = new VBox(6, label("No listings match these filters.", "section-title"),
+                label("Try clearing a filter or searching for something else.", "muted"));
+        empty.setAlignment(Pos.CENTER);
+        empty.setPadding(new Insets(42));
+        empty.setPrefWidth(860);
+        empty.getStyleClass().add("card");
+        return empty;
+    }
+
+    private Node listingCard(Listing listing, Runnable back) {
+        VBox card = new VBox(9);
+        card.getStyleClass().add("listing-card");
+        card.setPrefWidth(270);
+        card.setMaxWidth(270);
+
+        Node image = thumbnail(listing, 246, 146);
+        image.setOnMouseClicked(event -> {
+            PhotoViewer.show(image, listing.getPhotoPaths(), 0, listing.getTitle());
+            event.consume();
+        });
+        HBox top = new HBox(8, typeBadge(listing), spacer(),
+                label(listing.getPriceDisplay(), "price-label"));
+        top.setAlignment(Pos.CENTER_LEFT);
+
+        Label title = label(listing.getTitle(), "listing-title");
+        title.setWrapText(true);
+        title.setMaxWidth(238);
+        Label seller = label("@" + listing.getSellerUsername() + " · " + ratingSummary(listing.getSellerUsername()), "muted");
+        Label meta = label(listing.getCategory() + " · " + listing.getCondition() + " · " + listing.getMeetupLocation(), "muted");
+        Label posted = label("Posted " + time(listing.getPostedAt()), "hint-text");
+        HBox footer = new HBox(8, posted, spacer(),
+                button("View", "btn-primary", () -> openListing(listing.getId(), back)));
+        footer.setAlignment(Pos.CENTER_LEFT);
+
+        card.getChildren().addAll(image, top, title, seller, meta, footer);
+        UiAnimations.hoverLift(card);
+        card.setOnMouseClicked(event -> {
+            if (!PhotoViewer.isInteractiveTarget(event.getTarget())) {
+                openListing(listing.getId(), back);
+            }
+        });
+        return card;
+    }
+
+    private Label typeBadge(Listing listing) {
+        Label badge = label(listing.getTypeDisplay(), "badge");
+        badge.getStyleClass().add(switch (listing.getType()) {
+            case SELL -> "badge-sold";
+            case LEND -> "badge-pending";
+            case GIVEAWAY -> "badge-live";
+        });
+        return badge;
+    }
+
+    private static Region spacer() {
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+        return spacer;
     }
 
     private void restoreBrowse() {
@@ -138,9 +209,20 @@ public class BuyerDashboardController {
                 label("@" + listing.getSellerUsername() + " · " + listing.getMeetupLocation()
                         + " · Posted " + time(listing.getPostedAt()) + " · " + listing.getStatus(), "muted"));
         HBox.setHgrow(summary, Priority.ALWAYS);
-        HBox row = new HBox(14, thumbnail(listing, 86, 68), summary,
+        Node thumb = thumbnail(listing, 86, 68);
+        thumb.setOnMouseClicked(event -> {
+            PhotoViewer.show(thumb, listing.getPhotoPaths(), 0, listing.getTitle());
+            event.consume();
+        });
+        HBox row = new HBox(14, thumb, summary,
                 button("View listing", "btn-primary", () -> openListing(listing.getId(), back)));
         row.setAlignment(Pos.CENTER_LEFT);
+        UiAnimations.hoverLift(row);
+        row.setOnMouseClicked(event -> {
+            if (!PhotoViewer.isInteractiveTarget(event.getTarget())) {
+                openListing(listing.getId(), back);
+            }
+        });
         return card(row);
     }
 
@@ -157,8 +239,25 @@ public class BuyerDashboardController {
                 label("Posted " + time(listing.getPostedAt()), "muted"));
         if (listing.getLendingDays() != null) details.getChildren().add(label("Maximum loan: " + listing.getLendingDays() + " days", "label"));
         FlowPane photos = new FlowPane(10, 10);
-        for (String path : listing.getPhotoPaths()) photos.getChildren().add(photo(path, 220, 155));
-        if (photos.getChildren().isEmpty()) photos.getChildren().add(thumbnail(listing, 180, 112));
+        List<String> photoPaths = listing.getPhotoPaths();
+        for (int i = 0; i < photoPaths.size(); i++) {
+            String path = photoPaths.get(i);
+            Node tile = photo(path, 220, 155);
+            int index = i;
+            tile.setOnMouseClicked(event -> {
+                PhotoViewer.show(tile, photoPaths, index, listing.getTitle());
+                event.consume();
+            });
+            photos.getChildren().add(tile);
+        }
+        if (photos.getChildren().isEmpty()) {
+            Node fallback = thumbnail(listing, 180, 112);
+            fallback.setOnMouseClicked(event -> {
+                PhotoViewer.show(fallback, List.of(), 0, listing.getTitle());
+                event.consume();
+            });
+            photos.getChildren().add(fallback);
+        }
         details.getChildren().add(photos);
 
         String seller = listing.getSellerUsername();
@@ -454,28 +553,10 @@ public class BuyerDashboardController {
     }
 
     private static Node thumbnail(Listing listing, int width, int height) {
-        if (!listing.getPhotoPaths().isEmpty()) return photo(listing.getPhotoPaths().get(0), width, height);
-        return photo("", width, height);
+        return ImageSupport.firstPhoto(listing, width, height);
     }
 
     private static Node photo(String url, int width, int height) {
-        try {
-            if (!url.isBlank()) {
-                String source = new File(url).toURI().toString();
-                Image image = new Image(source, width, height, true, true, false);
-                if (!image.isError()) {
-                    ImageView view = new ImageView(image);
-                    view.getStyleClass().add("listing-photo");
-                    view.setAccessibleText("Listing photo");
-                    return view;
-                }
-            }
-        } catch (IllegalArgumentException ignored) {
-            // A missing photo leaves the listing and its actions available.
-        }
-        StackPane placeholder = new StackPane(new Label("No photo"));
-        placeholder.setMinSize(width, height);
-        placeholder.getStyleClass().add("photo-placeholder");
-        return placeholder;
+        return ImageSupport.thumbnail(url, width, height);
     }
 }

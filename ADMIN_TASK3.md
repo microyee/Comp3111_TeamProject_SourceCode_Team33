@@ -19,6 +19,7 @@ that were implemented, and gives a short demo script for the TA.
 | Shared presentation helpers | `AdminUi.java`, `AdminDialogs.java` | — |
 | Audit log | `AdminUsersPane` → **Audit Log** button | `AuditLogEntry`, `DummyDataService.logAudit` |
 | Data model additions | Abstract `User` + `Buyer`/`Seller`/`Admin`; `Request` with `Deal.requestId`; `Rating` with `dealId`; `Chat`/`Message`; `Listing` removal reason; `Notification` read state + related screen | — |
+| UI motion, photos & click actions | `controllers/UiAnimations.java` (page fade/slide, spinner, hover lift, badge pulse, card stagger), `controllers/PhotoViewer.java` (zoom/prev/next viewer) | `utils/ImageSupport.java`, real photos in `resources/images/listings/*.png` (credits in `CREDITS.md`); seller/admin listing clicks open the edit form |
 
 The admin packages are deliberately split into one pane per subtask.  The dashboard only
 handles navigation and the unread badge; business rules live in `DummyDataService` so the

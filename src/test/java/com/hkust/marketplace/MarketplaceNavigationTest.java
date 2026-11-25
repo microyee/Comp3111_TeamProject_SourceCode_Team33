@@ -1,17 +1,24 @@
 package com.hkust.marketplace;
 
+import com.hkust.marketplace.models.Listing;
+import com.hkust.marketplace.models.ListingType;
+import com.hkust.marketplace.models.ListingStatus;
 import com.hkust.marketplace.models.UserRole;
 import com.hkust.marketplace.utils.MarketplaceAccounts;
 import com.hkust.marketplace.utils.DummyDataService;
 import com.hkust.marketplace.utils.SceneManager;
 import com.hkust.marketplace.utils.SessionManager;
+import com.hkust.marketplace.utils.SellerMarketplace;
 import javafx.application.Platform;
 import javafx.scene.Parent;
+import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Labeled;
 import javafx.scene.image.ImageView;
 import java.nio.file.Path;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TextArea;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.DialogPane;
 import javafx.stage.Window;
 import javafx.stage.Stage;
@@ -119,6 +126,171 @@ class MarketplaceNavigationTest {
             }
             button(stage, "View listing").fire();
             assertEquals("Manage All Listings", title(stage));
+            SessionManager.logout();
+            stage.close();
+        });
+    }
+
+    @Test
+    void sellerBuyerAndAdminCompleteSaleThroughJavaFx() throws Exception {
+        onFx(() -> {
+            var data = DummyDataService.getInstance();
+            var accounts = new MarketplaceAccounts(data);
+            accounts.register(UserRole.SELLER, "market-test-seller", "Camera Seller", "Password1", "Password1", null, "", "Library");
+            accounts.register(UserRole.BUYER, "market-test-buyer", "Camera Buyer", "Password1", "Password1", null, null, null);
+            Stage stage = new Stage();
+            SceneManager.init(stage);
+
+            SceneManager.showSellerRegister();
+            SceneManager.showSellerLogin();
+            signIn(stage, "market-test-seller", "Password1", "Login");
+            navigate(stage, "btnCreate", "Create Listing");
+            Parent form = stage.getScene().getRoot();
+            button(stage, "Submit for review").fire();
+            assertTrue(hasLabel(form, "Choose a listing type."));
+            setChoice(form, "Select listing type", ListingType.SELL);
+            field(form, "Item name").setText("Integration film camera");
+            setChoice(form, "Select category", "Electronics");
+            setChoice(form, "Select condition", "Used");
+            ((TextArea) form.lookup(".text-area")).setText("Tested with a roll of film");
+            field(form, "Price in HKD").setText("99.50");
+            button(stage, "Submit for review").fire();
+            Listing listing = data.getListingsBySeller("market-test-seller").get(0);
+            assertEquals(ListingStatus.PENDING_REVIEW, listing.getStatus());
+            button(stage, "Logout").fire();
+
+            SessionManager.login(data.findUser("admin"));
+            SceneManager.showAdminDashboard();
+            Parent reviewCard = cardWithLabel(stage, "Integration film camera");
+            runDialogs(button(reviewCard, "Approve"), dialog -> button(dialog, "OK").fire(),
+                    dialog -> button(dialog, "OK").fire());
+            assertEquals(ListingStatus.LIVE, listing.getStatus());
+            SessionManager.logout();
+
+            SceneManager.showBuyerLogin();
+            signIn(stage, "market-test-buyer", "Password1", "Login");
+            field(stage.getScene().getRoot(), "Search listings").setText("Integration film camera");
+            button(stage, "View listing").fire();
+            runDialogs(button(stage, "Make offer / bid"), dialog -> {
+                field(dialog, "Amount in HKD").setText("0");
+                button(dialog, "Send").fire();
+                assertTrue(hasLabel(dialog, "Enter a positive HKD amount with up to two decimal places."));
+                field(dialog, "Amount in HKD").setText("80");
+                button(dialog, "Send").fire();
+            });
+            assertEquals("My Deals", title(stage));
+            button(stage, "Logout").fire();
+
+            SceneManager.showSellerLogin();
+            signIn(stage, "market-test-seller", "Password1", "Login");
+            navigate(stage, "btnRequests", "Incoming Requests");
+            runDialogs(button(stage, "Counter"), dialog -> {
+                field(dialog, "Amount in HKD").setText("90");
+                button(dialog, "Send").fire();
+            });
+            navigate(stage, "btnChat", "Messages");
+            navigate(stage, "btnStats", "Seller Stats");
+            navigate(stage, "btnReviews", "Reviews & Feedback");
+            navigate(stage, "btnNotifications", "Notifications");
+            navigate(stage, "btnProfile", "My Profile");
+            button(stage, "Logout").fire();
+
+            SceneManager.showBuyerLogin();
+            signIn(stage, "market-test-buyer", "Password1", "Login");
+            navigate(stage, "btnDeals", "My Deals");
+            runDialogs(button(stage, "Accept counteroffer"), dialog -> button(dialog, "OK").fire());
+            assertEquals(ListingStatus.RESERVED, listing.getStatus());
+            runDialogs(button(stage, "Complete deal"), confirm -> button(confirm, "OK").fire(), review -> {
+                setChoice(review, "Stars", 5);
+                ((TextArea) review.lookup(".text-area")).setText("Camera is in great condition.");
+                button(review, "Publish review").fire();
+            });
+            assertEquals(ListingStatus.SOLD, listing.getStatus());
+            assertEquals("Deal History", title(stage));
+            assertEquals(5.0, data.getPublicAverageRating("market-test-seller"));
+            button(stage, "Logout").fire();
+
+            SceneManager.showSellerLogin();
+            signIn(stage, "market-test-seller", "Password1", "Login");
+            navigate(stage, "btnReviews", "Reviews & Feedback");
+            runDialogs(button(stage, "Reply"), dialog -> {
+                ((TextArea) dialog.lookup(".text-area")).setText("Enjoy the camera!");
+                button(dialog, "Send reply").fire();
+            });
+            runDialogs(button(stage, "Flag review"), dialog -> {
+                ((TextArea) dialog.lookup(".text-area")).setText("Please check the context.");
+                button(dialog, "Send report").fire();
+            });
+            assertEquals("Enjoy the camera!", data.getRatingsForSeller("market-test-seller").get(0).getSellerReply());
+            SessionManager.login(data.findUser("admin"));
+            SceneManager.showAdminDashboard();
+            navigate(stage, "btnReports", "Moderation Reports");
+            Parent report = cardWithLabel(stage, "Integration film camera · Open");
+            button(report, "View rating").fire();
+            assertTrue(hasLabel(stage.getScene().getRoot(), "Camera is in great condition."));
+            runDialogs(button(stage, "Hide"), dialog -> button(dialog, "OK").fire());
+            assertEquals(0, data.getPublicRatingCount("market-test-seller"));
+            navigate(stage, "btnReports", "Moderation Reports");
+            Parent openReport = cardWithLabel(stage, "Integration film camera · Open");
+            runDialogs(button(openReport, "Resolve"), dialog -> {
+                button(dialog, "Resolve").fire();
+                assertTrue(hasLabel(dialog, "Resolution is required."));
+                ((TextArea) dialog.lookup(".text-area")).setText("Reviewed and hidden.");
+                button(dialog, "Resolve").fire();
+            });
+            assertTrue(data.catalog().reports(SessionManager.getCurrentUser()).stream()
+                    .anyMatch(item -> !item.isOpen() && "Reviewed and hidden.".equals(item.resolution())));
+            SessionManager.logout();
+            stage.close();
+        });
+    }
+
+    @Test
+    void sellerCanCorrectRejectedListingAndRemoveTheResubmission() throws Exception {
+        onFx(() -> {
+            var data = DummyDataService.getInstance();
+            var accounts = new MarketplaceAccounts(data);
+            var seller = accounts.register(UserRole.SELLER, "test-loan-seller", "Loan Seller", "Password1", "Password1",
+                    null, "", "Library");
+            var marketplace = new SellerMarketplace(data);
+            Listing item = marketplace.save(seller, null, new SellerMarketplace.ListingDetails(
+                    ListingType.GIVEAWAY, "Test desk lamp", "Furniture", "Used", "Works well", "Library", null, null, List.of()));
+            Stage stage = new Stage();
+            SceneManager.init(stage);
+            SessionManager.login(data.findUser("admin"));
+            SceneManager.showAdminDashboard();
+            Parent review = cardWithLabel(stage, item.getTitle());
+            runDialogs(button(review, "Reject"), dialog -> {
+                Button submit = button(dialog, "Submit");
+                assertTrue(submit.isDisabled());
+                ((TextArea) dialog.lookup(".text-area")).setText("Add a clearer description.");
+                submit.fire();
+            }, dialog -> button(dialog, "OK").fire());
+            assertEquals(ListingStatus.REJECTED, item.getStatus());
+            SessionManager.logout();
+
+            SceneManager.showSellerLogin();
+            signIn(stage, seller.getUsername(), "Password1", "Login");
+            Parent row = cardWithLabel(stage, item.getTitle());
+            assertTrue(hasLabel(row, "Review reason: Add a clearer description."));
+            button(row, "Edit").fire();
+            assertEquals("Edit Listing", title(stage));
+            Parent edit = stage.getScene().getRoot();
+            setChoice(edit, "Select listing type", ListingType.LEND);
+            field(edit, "Maximum duration in days").setText("one");
+            button(stage, "Save and resubmit").fire();
+            assertTrue(hasLabel(edit, "Enter the loan duration in whole days."));
+            field(edit, "Maximum duration in days").setText("1");
+            runDialogs(button(stage, "Save and resubmit"), dialog -> button(dialog, "OK").fire());
+            assertEquals(ListingStatus.PENDING_REVIEW, item.getStatus());
+            assertEquals(ListingType.LEND, item.getType());
+            assertEquals(1, item.getLendingDays());
+            assertNull(item.getRejectionReason());
+
+            Parent updated = cardWithLabel(stage, item.getTitle());
+            runDialogs(button(updated, "Delete"), dialog -> button(dialog, "OK").fire());
+            assertEquals(ListingStatus.REMOVED, item.getStatus());
+            assertFalse(hasLabel(stage.getScene().getRoot(), item.getTitle()));
             SessionManager.logout();
             stage.close();
         });
@@ -269,6 +441,14 @@ class MarketplaceNavigationTest {
         return root.lookupAll(".text-field").stream().filter(TextField.class::isInstance).map(TextField.class::cast)
                 .filter(field -> name.equals(field.getAccessibleText())).findFirst()
                 .orElseThrow(() -> new AssertionError("No field named " + name));
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <T> void setChoice(Parent root, String name, T value) {
+        root.applyCss();
+        Node combo = root.lookupAll(".combo-box").stream().filter(node -> name.equals(node.getAccessibleText()))
+                .findFirst().orElseThrow(() -> new AssertionError("No dropdown named " + name));
+        ((ComboBox<T>) combo).setValue(value);
     }
 
     private static void signIn(Stage stage, String name, String password, String buttonText) {

@@ -1,393 +1,335 @@
 package com.hkust.marketplace.controllers.seller;
 
+import com.hkust.marketplace.MarketplaceApp;
 import com.hkust.marketplace.models.*;
-import com.hkust.marketplace.utils.DummyDataService;
-import com.hkust.marketplace.utils.SceneManager;
-import com.hkust.marketplace.utils.SessionManager;
-import javafx.collections.FXCollections;
+import com.hkust.marketplace.utils.*;
+import javafx.application.Platform;
 import javafx.fxml.FXML;
-import javafx.geometry.Insets;
-import javafx.geometry.Pos;
-import javafx.scene.chart.BarChart;
-import javafx.scene.chart.CategoryAxis;
-import javafx.scene.chart.NumberAxis;
-import javafx.scene.chart.PieChart;
-import javafx.scene.chart.XYChart;
+import javafx.scene.Node;
+import javafx.scene.chart.*;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 
-import java.time.format.DateTimeFormatter;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
+
+import static com.hkust.marketplace.controllers.PortalUi.*;
 
 public class SellerDashboardController {
-
     @FXML private StackPane contentPane;
-    @FXML private Label pageTitle;
-    @FXML private Label welcomeLabel;
-    @FXML private Button btnListings, btnCreate, btnStats, btnReviews, btnNotifications, btnProfile;
+    @FXML private Label pageTitle, welcomeLabel, unreadLabel;
+    @FXML private Button btnListings, btnCreate, btnRequests, btnChat, btnStats, btnReviews, btnNotifications, btnProfile;
 
-    private Button currentActiveBtn;
+    private final DummyDataService data = DummyDataService.getInstance();
+    private final MarketplaceAccounts accounts = new MarketplaceAccounts(data);
+    private final MarketplaceActivity activity = data.activity();
+    private final SellerMarketplace marketplace = new SellerMarketplace(data);
+    private User seller;
+    private Button active;
+    private Runnable onLoanUpdate = () -> {};
 
     @FXML
-    public void initialize() {
-        User user = SessionManager.getCurrentUser();
-        if (user != null) welcomeLabel.setText("Hello, " + user.getFullName());
-        currentActiveBtn = btnListings;
+    private void initialize() {
+        if (!SessionManager.isSessionValid() || !SessionManager.isSeller()) {
+            SessionManager.logout();
+            Platform.runLater(SceneManager::showSellerLogin);
+            return;
+        }
+        seller = SessionManager.getCurrentUser();
+        welcome();
+        contentPane.addEventHandler(MarketplaceApp.LOANS_UPDATED, event -> {
+            badge();
+            onLoanUpdate.run();
+        });
         showMyListings();
     }
 
-    private void setActive(Button btn, String title) {
-        if (currentActiveBtn != null) currentActiveBtn.getStyleClass().remove("sidebar-btn-active");
-        btn.getStyleClass().add("sidebar-btn-active");
-        currentActiveBtn = btn;
+    private void welcome() {
+        welcomeLabel.setText("Seller: " + seller.getFullName());
+    }
+
+    private void badge() {
+        int count = data.getUnreadCount(seller.getUsername());
+        unreadLabel.setText(count + " unread");
+        unreadLabel.getStyleClass().setAll("badge", count == 0 ? "badge-live" : "badge-pending");
+    }
+
+    private void show(Button button, String title, Node page) {
+        if (active != null) active.getStyleClass().remove("sidebar-btn-active");
+        button.getStyleClass().remove("sidebar-btn-active");
+        button.getStyleClass().add("sidebar-btn-active");
+        active = button;
         pageTitle.setText(title);
+        contentPane.getChildren().setAll(page);
+        onLoanUpdate = () -> {};
+        badge();
     }
 
     @FXML
-    private void showMyListings() {
-        setActive(btnListings, "My Listings");
-        contentPane.getChildren().clear();
+    private void showMyListings() { showMyListings(null); }
 
-        VBox root = new VBox(14);
-        root.setPadding(new Insets(4));
-
-        User user = SessionManager.getCurrentUser();
-        List<Listing> myListings = DummyDataService.getInstance()
-                .getListingsBySeller(user != null ? user.getUsername() : "");
-
-        if (myListings.isEmpty()) {
-            Label empty = new Label("You have not posted any listings yet.");
-            empty.setStyle("-fx-text-fill: #5a5a7a;");
-            root.getChildren().add(empty);
-        } else {
-            for (Listing l : myListings) {
-                root.getChildren().add(createListingRow(l));
+    private void showMyListings(String highlight) {
+        var status = choice("All statuses", List.of(ListingStatus.values()));
+        TextField query = field("Search my listings");
+        VBox rows = new VBox(10);
+        Runnable render = () -> {
+            rows.getChildren().clear();
+            String text = query.getText().strip().toLowerCase(Locale.ROOT);
+            for (Listing listing : data.getListingsBySeller(seller.getUsername())) {
+                if (!MarketplaceCatalog.contains(listing.getTitle(), text)
+                        || status.getValue() != null && status.getValue() != listing.getStatus()) continue;
+                if (listing.getStatus() == ListingStatus.REMOVED && seller.getUsername().equals(listing.getRemovedBy())
+                        && status.getValue() != ListingStatus.REMOVED && !listing.getId().equals(highlight)) continue;
+                rows.getChildren().add(listingRow(listing, listing.getId().equals(highlight), this::showMyListings));
             }
-        }
-        ScrollPane scroll = new ScrollPane(root);
-        scroll.setFitToWidth(true);
-        contentPane.getChildren().add(scroll);
+            if (rows.getChildren().isEmpty()) rows.getChildren().add(label("No listings match these filters.", "muted"));
+        };
+        query.textProperty().addListener((observable, old, value) -> render.run());
+        status.setOnAction(event -> render.run());
+        HBox toolbar = new HBox(8, query, status, button("Clear filters", "btn-outline", () -> {
+            query.clear();
+            status.setValue(null);
+        }), button("Create listing", "btn-primary", this::showCreateListing));
+        toolbar.getStyleClass().add("toolbar");
+        ScrollPane list = scroll(rows);
+        VBox.setVgrow(list, Priority.ALWAYS);
+        show(btnListings, "My Listings", new VBox(12, toolbar, list));
+        onLoanUpdate = render;
+        render.run();
     }
 
-    private HBox createListingRow(Listing l) {
-        HBox row = new HBox(16);
-        row.getStyleClass().add("card");
-        row.setAlignment(Pos.CENTER_LEFT);
-        row.setPadding(new Insets(14));
-
-        VBox info = new VBox(4);
-        HBox.setHgrow(info, Priority.ALWAYS);
-        Label title = new Label(l.getTitle());
-        title.setStyle("-fx-font-weight: bold; -fx-font-size: 15px;");
-        Label meta = new Label(l.getCategory() + " · " + l.getTypeDisplay() + " · " + l.getMeetupLocation());
-        meta.setStyle("-fx-text-fill: #5a5a7a; -fx-font-size: 12px;");
-        info.getChildren().addAll(title, meta);
-
-        Label status = new Label(l.getStatus().name().replace('_', ' '));
-        status.getStyleClass().add("badge");
-        switch (l.getStatus()) {
-            case LIVE -> status.getStyleClass().add("badge-live");
-            case PENDING_REVIEW -> status.getStyleClass().add("badge-pending");
-            case REJECTED -> status.getStyleClass().add("badge-rejected");
-            default -> status.getStyleClass().add("badge-sold");
+    private Node listingRow(Listing listing, boolean highlight, Runnable refresh) {
+        String id = listing.getId();
+        VBox row = card(label(listing.getTitle(), "section-title"),
+                label(listing.getTypeDisplay() + " · " + listing.getPriceDisplay() + " · " + listing.getCategory()
+                        + " · " + listing.getCondition(), "label"),
+                label(listing.getStatus() + " · " + listing.getMeetupLocation() + " · " + listing.getViewCount() + " views", "muted"));
+        if (highlight) row.getStyleClass().add("notif-unread");
+        if (listing.getRejectionReason() != null) row.getChildren().add(label("Review reason: " + listing.getRejectionReason(), "error-text"));
+        if (listing.getRemovalReason() != null) row.getChildren().add(label("Removal reason: " + listing.getRemovalReason(), "muted"));
+        HBox actions = new HBox(8, button("Incoming requests", "btn-outline", () -> showRequests(id, null)));
+        if (marketplace.canEdit(seller, id)) {
+            actions.getChildren().addAll(button("Edit", "btn-outline", () -> editListing(listing)),
+                    button("Delete", "btn-danger", () -> {
+                        if (confirm(contentPane, "Delete listing?", listing.getTitle())) {
+                            marketplace.remove(seller, id);
+                            refresh.run();
+                        }
+                    }));
         }
-
-        Button editBtn = new Button("Edit");
-        editBtn.getStyleClass().addAll("btn-outline", "btn-sm");
-        editBtn.setOnAction(e -> new Alert(Alert.AlertType.INFORMATION,
-                "Edit form would open here.\n(Demo placeholder)").showAndWait());
-
-        Button delBtn = new Button("Delete");
-        delBtn.getStyleClass().addAll("btn-danger", "btn-sm");
-        delBtn.setOnAction(e -> {
-            Alert conf = new Alert(Alert.AlertType.CONFIRMATION, "Delete this listing?");
-            conf.showAndWait().ifPresent(r -> {
-                if (r == ButtonType.OK) {
-                    DummyDataService.getInstance().removeListing(l.getId());
-                    showMyListings();
+        if (marketplace.canMarkSold(seller, id)) {
+            actions.getChildren().add(button("Mark as sold", "btn-success", () -> {
+                if (confirm(contentPane, "Mark as sold?", listing.getTitle())) {
+                    marketplace.markSold(seller, id);
+                    refresh.run();
                 }
-            });
-        });
-
-        row.getChildren().addAll(info, status, editBtn, delBtn);
+            }));
+        }
+        row.getChildren().add(actions);
         return row;
     }
 
     @FXML
     private void showCreateListing() {
-        setActive(btnCreate, "Create New Listing");
-        contentPane.getChildren().clear();
+        show(btnCreate, "Create Listing", SellerListingForm.build(seller, null, marketplace, this::showMyListings));
+    }
 
-        VBox form = new VBox(12);
-        form.setMaxWidth(520);
-        form.getStyleClass().add("card");
-        form.setPadding(new Insets(20));
+    private void editListing(Listing listing) {
+        if (!marketplace.canEdit(seller, listing.getId())) throw new IllegalArgumentException("This listing can no longer be edited.");
+        show(btnListings, "Edit Listing", SellerListingForm.build(seller, listing, marketplace, this::showMyListings));
+    }
 
-        Label title = new Label("Post a new item");
-        title.getStyleClass().add("section-title");
+    @FXML
+    private void showRequests() { showRequests(null, null); }
 
-        ComboBox<String> typeCombo = new ComboBox<>(FXCollections.observableArrayList("Sell", "Lend", "Give Away"));
-        typeCombo.setPromptText("Listing type *");
-        typeCombo.setMaxWidth(Double.MAX_VALUE);
-
-        TextField nameField = new TextField();
-        nameField.setPromptText("Item name *");
-        ComboBox<String> catCombo = new ComboBox<>(FXCollections.observableArrayList(DummyDataService.CATEGORIES));
-        catCombo.setPromptText("Category *");
-        catCombo.setMaxWidth(Double.MAX_VALUE);
-        ComboBox<String> condCombo = new ComboBox<>(FXCollections.observableArrayList(DummyDataService.CONDITIONS));
-        condCombo.setPromptText("Condition *");
-        condCombo.setMaxWidth(Double.MAX_VALUE);
-        TextArea descArea = new TextArea();
-        descArea.setPromptText("Description *");
-        descArea.setPrefRowCount(3);
-
-        TextField priceField = new TextField();
-        priceField.setPromptText("Price (HK$) – required for Sell");
-        TextField daysField = new TextField();
-        daysField.setPromptText("Lending duration (days) – required for Lend");
-
-        ComboBox<String> meetupCombo = new ComboBox<>(FXCollections.observableArrayList(DummyDataService.HKUST_LOCATIONS));
-        meetupCombo.setPromptText("Meet-up location *");
-        meetupCombo.setMaxWidth(Double.MAX_VALUE);
-
-        Label photoNote = new Label("📷 Photos: up to 6 (UI placeholder – file chooser not wired in demo)");
-        photoNote.setStyle("-fx-text-fill: #9aa0b0; -fx-font-size: 12px;");
-
-        Button submitBtn = new Button("Submit for Review");
-        submitBtn.getStyleClass().add("btn-gold");
-        submitBtn.setOnAction(e -> {
-            if (typeCombo.getValue() == null || nameField.getText().isBlank() ||
-                    catCombo.getValue() == null || condCombo.getValue() == null ||
-                    meetupCombo.getValue() == null || descArea.getText() == null ||
-                    descArea.getText().isBlank()) {
-                new Alert(Alert.AlertType.WARNING, "Please fill all required fields.").showAndWait();
-                return;
+    private void showRequests(String listingId, String requestId) {
+        VBox rows = new VBox(10);
+        CheckBox activeOnly = new CheckBox("Open requests only");
+        activeOnly.setSelected(requestId == null);
+        Runnable render = () -> {
+            rows.getChildren().clear();
+            List<Request> requests = data.getRequestsForSeller(seller.getUsername()).stream()
+                    .filter(r -> listingId == null || listingId.equals(r.getListingId()))
+                    .filter(r -> !activeOnly.isSelected() || r.isActive())
+                    .sorted(Comparator.comparing(Request::getCreatedAt).reversed()).toList();
+            for (Request request : requests) {
+                VBox row = requestRow(request, () -> showRequests(listingId, request.getId()));
+                if (request.getId().equals(requestId)) row.getStyleClass().add("notif-unread");
+                rows.getChildren().add(row);
             }
-            User user = SessionManager.getCurrentUser();
-            Listing listing = new Listing();
-            listing.setTitle(nameField.getText().trim());
-            listing.setDescription(descArea.getText());
-            listing.setCategory(catCombo.getValue());
-            listing.setCondition(condCombo.getValue());
-            listing.setMeetupLocation(meetupCombo.getValue());
-            listing.setSellerUsername(user.getUsername());
-            listing.setSellerFullName(user.getFullName());
-            listing.setStatus(ListingStatus.PENDING_REVIEW);
+            if (rows.getChildren().isEmpty()) rows.getChildren().add(label("No matching requests.", "muted"));
+        };
+        HBox toolbar = new HBox(8, activeOnly);
+        if (listingId != null) toolbar.getChildren().add(button("Show all listings", "btn-outline", this::showRequests));
+        toolbar.getStyleClass().add("toolbar");
+        activeOnly.setOnAction(event -> render.run());
+        ScrollPane list = scroll(rows);
+        VBox.setVgrow(list, Priority.ALWAYS);
+        show(btnRequests, "Incoming Requests", new VBox(12, toolbar, list));
+        onLoanUpdate = render;
+        render.run();
+    }
 
-            switch (typeCombo.getValue()) {
-                case "Sell" -> {
-                    listing.setType(ListingType.SELL);
-                    try { listing.setPrice(Double.parseDouble(priceField.getText())); }
-                    catch (Exception ex) {
-                        new Alert(Alert.AlertType.WARNING, "Valid price required for Sell listings.").showAndWait();
-                        return;
-                    }
-                }
-                case "Lend" -> {
-                    listing.setType(ListingType.LEND);
-                    try { listing.setLendingDays(Integer.parseInt(daysField.getText())); }
-                    catch (Exception ex) {
-                        new Alert(Alert.AlertType.WARNING, "Valid lending days required.").showAndWait();
-                        return;
-                    }
-                }
-                default -> listing.setType(ListingType.GIVEAWAY);
+    private VBox requestRow(Request request, Runnable refresh) {
+        var terms = MarketplaceActivity.proposed(request);
+        VBox row = card(label(request.getListingTitle() + " · " + request.getStatus(), "section-title"),
+                label("@" + request.getBuyerUsername() + " · " + request.getTypeDisplay() + " · " + time(request.getCreatedAt()), "muted"),
+                label(terms.display(request.getType()), "label"));
+        if ("Countered".equals(request.getStatus())) {
+            row.getChildren().add(label("Counteroffer: " + MarketplaceActivity.counterTerms(request).display(request.getType()), "label"));
+        }
+        Deal deal = data.findDealForRequest(request.getId());
+        if (deal != null && !"Pending".equals(deal.getStatus())) {
+            row.getChildren().add(label("Deal: " + deal.getStatus(), "muted"));
+        }
+        HBox actions = new HBox(8, button("Chat", "btn-outline",
+                () -> showChat(activity.chatForRequest(seller, request.getId()))));
+        if ("Pending".equals(request.getStatus())) {
+            actions.getChildren().addAll(button("Accept", "btn-primary",
+                            () -> respond(request, MarketplaceActivity.Decision.ACCEPT, refresh)),
+                    button("Decline", "btn-outline", () -> respond(request, MarketplaceActivity.Decision.DECLINE, refresh)));
+            if (request.getType() != ListingType.GIVEAWAY) {
+                actions.getChildren().add(button("Counter", "btn-outline", () -> termsForm(contentPane, request.getType(),
+                        terms, "Send counteroffer", agreement -> {
+                            activity.respond(seller, request.getId(), MarketplaceActivity.Decision.COUNTER, agreement);
+                            refresh.run();
+                        })));
             }
-            DummyDataService.getInstance().addListing(listing);
-            // Notify admin
-            DummyDataService.getInstance().addNotification(new Notification(
-                    "admin", "New Listing Submitted",
-                    user.getFullName() + " submitted '" + listing.getTitle() + "' for review.",
-                    "Submission", "REVIEW", listing.getId()));
-            new Alert(Alert.AlertType.INFORMATION,
-                    "Listing submitted! Status: Pending Review.\nAdmin will review shortly.\n(Demo – in-memory only)").showAndWait();
-            showMyListings();
-        });
+        }
+        row.getChildren().add(actions);
+        return row;
+    }
 
-        form.getChildren().addAll(title,
-                new Label("Listing Type *"), typeCombo,
-                new Label("Item Name *"), nameField,
-                new Label("Category *"), catCombo,
-                new Label("Condition *"), condCombo,
-                new Label("Description *"), descArea,
-                new Label("Price (Sell only)"), priceField,
-                new Label("Lending Days (Lend only)"), daysField,
-                new Label("Meet-up Location *"), meetupCombo,
-                photoNote, submitBtn);
+    private void respond(Request request, MarketplaceActivity.Decision decision, Runnable refresh) {
+        String title = decision == MarketplaceActivity.Decision.ACCEPT ? "Accept request?" : "Decline request?";
+        if (confirm(contentPane, title, MarketplaceActivity.proposed(request).display(request.getType()))) {
+            activity.respond(seller, request.getId(), decision, null);
+            refresh.run();
+        }
+    }
 
-        ScrollPane scroll = new ScrollPane(form);
-        scroll.setFitToWidth(true);
-        contentPane.getChildren().add(scroll);
+    @FXML
+    private void showMessages() { showChat(null); }
+
+    private void showChat(Chat selected) {
+        show(btnChat, "Messages", chat(seller, activity, selected, null));
     }
 
     @FXML
     private void showStats() {
-        setActive(btnStats, "Seller Stats");
-        contentPane.getChildren().clear();
-
-        VBox root = new VBox(20);
-        root.setPadding(new Insets(4));
-
-        User user = SessionManager.getCurrentUser();
-        List<Listing> myListings = DummyDataService.getInstance()
-                .getListingsBySeller(user != null ? user.getUsername() : "");
-
-        // Metric cards
-        HBox metrics = new HBox(16);
-        metrics.getChildren().addAll(
-                metricCard("Listings", String.valueOf(myListings.size()), "#003974"),
-                metricCard("Avg Rating", String.format("%.1f", user != null ? user.getAverageRating() : 0), "#A68137"),
-                metricCard("Reviews", String.valueOf(user != null ? user.getRatingCount() : 0), "#2e7d32"),
-                metricCard("Views (demo)", "128", "#1565c0")
-        );
-        root.getChildren().add(metrics);
-
-        // Bar chart
-        CategoryAxis xAxis = new CategoryAxis();
-        NumberAxis yAxis = new NumberAxis();
-        BarChart<String, Number> barChart = new BarChart<>(xAxis, yAxis);
-        barChart.setTitle("Listings by Category (demo data)");
-        barChart.setLegendVisible(false);
-        barChart.setPrefHeight(280);
-        XYChart.Series<String, Number> series = new XYChart.Series<>();
-        series.getData().add(new XYChart.Data<>("Textbooks", 3));
-        series.getData().add(new XYChart.Data<>("Electronics", 5));
-        series.getData().add(new XYChart.Data<>("Furniture", 2));
-        series.getData().add(new XYChart.Data<>("Others", 1));
-        barChart.getData().add(series);
-
-        // Pie chart
-        PieChart pie = new PieChart();
-        pie.setTitle("Listing Status Distribution");
-        pie.setPrefHeight(280);
-        pie.getData().add(new PieChart.Data("Live", 4));
-        pie.getData().add(new PieChart.Data("Pending", 1));
-        pie.getData().add(new PieChart.Data("Sold", 2));
-
-        HBox charts = new HBox(20, barChart, pie);
-        root.getChildren().add(charts);
-
-        ScrollPane scroll = new ScrollPane(root);
-        scroll.setFitToWidth(true);
-        contentPane.getChildren().add(scroll);
+        var stats = marketplace.stats(seller);
+        FlowPane metrics = new FlowPane(10, 10,
+                metric("Listing views", stats.views()), metric("Offers", stats.offers()),
+                metric("Loan requests", stats.loanRequests()), metric("Giveaway claims", stats.claims()),
+                metric("Completed deals", stats.completedSales() + stats.returnedLoans() + stats.completedGiveaways()),
+                metric("Average rating", stats.ratingCount() == 0 ? "No ratings yet" : String.format("%.1f / 5", stats.averageRating())));
+        VBox rows = new VBox(12, metrics, viewsChart(stats), dealChart(stats));
+        if (!stats.listings().isEmpty()) {
+            rows.getChildren().add(label("Activity by listing", "section-title"));
+            for (var item : stats.listings()) {
+                rows.getChildren().add(card(label(item.title(), "section-title"),
+                        label(item.views() + " views · " + item.offers() + " offers · " + item.loanRequests()
+                                + " loan requests · " + item.claims() + " claims · " + item.completedDeals() + " completed", "muted")));
+            }
+        }
+        show(btnStats, "Seller Stats", scroll(rows));
+        onLoanUpdate = this::showStats;
     }
 
-    private VBox metricCard(String label, String value, String color) {
-        VBox card = new VBox(4);
-        card.getStyleClass().add("card");
-        card.setAlignment(Pos.CENTER);
-        card.setPrefWidth(140);
-        card.setPadding(new Insets(16));
-        Label val = new Label(value);
-        val.setStyle("-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: " + color + ";");
-        Label lbl = new Label(label);
-        lbl.setStyle("-fx-text-fill: #5a5a7a; -fx-font-size: 12px;");
-        card.getChildren().addAll(val, lbl);
-        return card;
+    private Node metric(String summary, Object value) {
+        VBox metric = card(label(value.toString(), "section-title"), label(summary, "muted"));
+        metric.setMinWidth(126);
+        return metric;
+    }
+
+    private Node viewsChart(SellerMarketplace.Stats stats) {
+        if (stats.views() == 0) return card(label("No listing views yet.", "muted"));
+        var axis = new CategoryAxis();
+        axis.setLabel("Listing");
+        var values = new NumberAxis();
+        values.setLabel("Views");
+        var chart = new BarChart<String, Number>(axis, values);
+        chart.setAnimated(false);
+        chart.setLegendVisible(false);
+        chart.setTitle("Views by listing");
+        chart.setPrefHeight(280);
+        var series = new XYChart.Series<String, Number>();
+        for (var item : stats.listings()) series.getData().add(new XYChart.Data<>(item.id(), item.views()));
+        chart.getData().add(series);
+        return card(chart);
+    }
+
+    private Node dealChart(SellerMarketplace.Stats stats) {
+        if (stats.completedSales() + stats.returnedLoans() + stats.completedGiveaways() == 0) {
+            return card(label("No completed deals yet.", "muted"));
+        }
+        PieChart chart = new PieChart();
+        chart.setAnimated(false);
+        chart.setTitle("Completed deals by type");
+        chart.setPrefHeight(280);
+        chart.getData().addAll(new PieChart.Data("Sales (" + stats.completedSales() + ")", stats.completedSales()),
+                new PieChart.Data("Loans (" + stats.returnedLoans() + ")", stats.returnedLoans()),
+                new PieChart.Data("Giveaways (" + stats.completedGiveaways() + ")", stats.completedGiveaways()));
+        return card(chart);
     }
 
     @FXML
-    private void showReviews() {
-        setActive(btnReviews, "Reviews & Feedback");
-        contentPane.getChildren().clear();
+    private void showReviews() { showReviews(null); }
 
-        VBox root = new VBox(12);
-        root.setPadding(new Insets(4));
-
-        User user = SessionManager.getCurrentUser();
-        List<Rating> reviews = DummyDataService.getInstance()
-                .getRatingsForSeller(user != null ? user.getUsername() : "");
-
-        if (reviews.isEmpty()) {
-            root.getChildren().add(new Label("No reviews yet."));
-        } else {
-            for (Rating r : reviews) {
-                VBox item = new VBox(6);
-                item.getStyleClass().add("card");
-                Label stars = new Label("★".repeat(r.getRating()) + "☆".repeat(5 - r.getRating()));
-                stars.setStyle("-fx-text-fill: #A68137; -fx-font-size: 16px;");
-                Label comment = new Label(r.getComment());
-                comment.setWrapText(true);
-                Label meta = new Label("by @" + r.getBuyerUsername() + " · " + r.getListingTitle());
-                meta.setStyle("-fx-text-fill: #9aa0b0; -fx-font-size: 12px;");
-                HBox actions = new HBox(8);
-                Button reply = new Button("Reply");
-                reply.getStyleClass().addAll("btn-outline", "btn-sm");
-                reply.setOnAction(e -> new Alert(Alert.AlertType.INFORMATION, "Reply sent to buyer (demo).").showAndWait());
-                Button flag = new Button("Flag");
-                flag.getStyleClass().addAll("btn-danger", "btn-sm");
-                flag.setOnAction(e -> new Alert(Alert.AlertType.INFORMATION, "Rating flagged for admin (demo).").showAndWait());
-                actions.getChildren().addAll(reply, flag);
-                item.getChildren().addAll(stars, comment, meta, actions);
-                root.getChildren().add(item);
+    private void showReviews(String highlight) {
+        var reviews = data.getAllRatingsForSeller(seller.getUsername());
+        int visible = data.getPublicRatingCount(seller.getUsername());
+        String summary = visible == 0 ? "No public ratings yet" : String.format("%.1f / 5 · %d public reviews",
+                data.getPublicAverageRating(seller.getUsername()), visible);
+        VBox rows = new VBox(10, label(summary, "section-title"));
+        if (reviews.isEmpty()) rows.getChildren().add(label("No feedback yet.", "muted"));
+        for (Rating rating : reviews) {
+            VBox item = card(label(rating.getRating() + " / 5 · " + rating.getListingTitle(), "section-title"),
+                    label("@" + rating.getBuyerUsername() + " · " + time(rating.getCreatedAt()), "muted"),
+                    label(rating.getComment(), "label"));
+            if (rating.getId().equals(highlight)) item.getStyleClass().add("notif-unread");
+            if (rating.getSellerReply() != null) item.getChildren().add(label("Your reply: " + rating.getSellerReply(), "label"));
+            if (rating.isHidden()) {
+                item.getStyleClass().add("hidden-review");
+                item.getChildren().add(label("Hidden by moderation", "muted"));
+            } else {
+                item.getChildren().add(new HBox(8, button(rating.getSellerReply() == null ? "Reply" : "Edit reply", "btn-outline",
+                        () -> textForm(contentPane, "Reply to review", "Send reply", "Reply", rating.getSellerReply(), text -> {
+                            marketplace.reply(seller, rating.getId(), text);
+                            showReviews(rating.getId());
+                        })), button("Flag review", "btn-outline",
+                        () -> textForm(contentPane, "Flag review", "Send report", "Reason for flagging", "", text -> {
+                            marketplace.flag(seller, rating.getId(), text);
+                            showReviews(rating.getId());
+                        }))));
             }
+            rows.getChildren().add(item);
         }
-        contentPane.getChildren().add(new ScrollPane(root));
+        show(btnReviews, "Reviews & Feedback", scroll(rows));
     }
 
     @FXML
     private void showNotifications() {
-        setActive(btnNotifications, "Notifications");
-        contentPane.getChildren().clear();
-        VBox root = new VBox(12);
-        root.setPadding(new Insets(4));
-        User user = SessionManager.getCurrentUser();
-        List<Notification> notifs = DummyDataService.getInstance()
-                .getNotificationsFor(user != null ? user.getUsername() : "");
-        if (notifs.isEmpty()) {
-            root.getChildren().add(new Label("No notifications."));
-        } else {
-            for (Notification n : notifs) {
-                VBox item = new VBox(4);
-                item.getStyleClass().add("notif-item");
-                Label t = new Label(n.getTitle());
-                t.setStyle("-fx-font-weight: bold;");
-                Label m = new Label(n.getMessage());
-                m.setWrapText(true);
-                m.setStyle("-fx-text-fill: #5a5a7a; -fx-font-size: 13px;");
-                Label meta = new Label(n.getCategory() + " · " +
-                        n.getTimestamp().format(DateTimeFormatter.ofPattern("dd MMM HH:mm")));
-                meta.setStyle("-fx-text-fill: #9aa0b0; -fx-font-size: 11px;");
-                item.getChildren().addAll(t, m, meta);
-                root.getChildren().add(item);
+        show(btnNotifications, "Notifications", notifications(seller, data, notice -> {
+            String id = notice.getRelatedId();
+            switch (notice.getRelatedScreen()) {
+                case "CHAT" -> showChat(data.findChat(id));
+                case "REQUESTS" -> showRequests(null, id);
+                case "DEALS" -> {
+                    Deal deal = data.findDeal(id);
+                    if (deal == null) showRequests();
+                    else showRequests(deal.getListingId(), deal.getRequestId());
+                }
+                case "LISTINGS" -> showMyListings(id);
+                case "RATINGS" -> showReviews(id);
+                default -> showNotifications();
             }
-        }
-        contentPane.getChildren().add(new ScrollPane(root));
+        }, this::badge));
     }
 
     @FXML
-    private void showProfile() {
-        setActive(btnProfile, "My Profile");
-        contentPane.getChildren().clear();
-        User user = SessionManager.getCurrentUser();
-        VBox form = new VBox(12);
-        form.setMaxWidth(420);
-        form.getStyleClass().add("card");
-        form.setPadding(new Insets(20));
-        form.getChildren().add(new Label("Edit Seller Profile") {{ getStyleClass().add("section-title"); }});
-
-        TextField name = new TextField(user != null ? user.getFullName() : "");
-        PasswordField pass = new PasswordField();
-        pass.setPromptText("New password (optional)");
-        TextArea bio = new TextArea(user != null && user.getBio() != null ? user.getBio() : "");
-        bio.setPrefRowCount(3);
-        ComboBox<String> meetup = new ComboBox<>(FXCollections.observableArrayList(DummyDataService.HKUST_LOCATIONS));
-        if (user != null && user.getPreferredMeetup() != null) meetup.setValue(user.getPreferredMeetup());
-        meetup.setMaxWidth(Double.MAX_VALUE);
-
-        Button save = new Button("Save Changes");
-        save.getStyleClass().add("btn-gold");
-        save.setOnAction(e -> new Alert(Alert.AlertType.INFORMATION, "Profile saved (demo).").showAndWait());
-
-        form.getChildren().addAll(
-                new Label("Full Name"), name,
-                new Label("New Password"), pass,
-                new Label("Bio"), bio,
-                new Label("Preferred Meet-up"), meetup,
-                save);
-        contentPane.getChildren().add(form);
-    }
+    private void showProfile() { show(btnProfile, "My Profile", profile(seller, accounts, this::welcome)); }
 
     @FXML
     private void logout() {

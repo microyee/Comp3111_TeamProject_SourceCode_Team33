@@ -27,6 +27,10 @@
                     onAction="#showMyListings" maxWidth="Infinity" alignment="CENTER_LEFT"/>
             <Button fx:id="btnCreate" text="  Create Listing" styleClass="sidebar-btn"
                     onAction="#showCreateListing" maxWidth="Infinity" alignment="CENTER_LEFT"/>
+            <Button fx:id="btnRequests" text="  Incoming Requests" styleClass="sidebar-btn"
+                    onAction="#showRequests" maxWidth="Infinity" alignment="CENTER_LEFT"/>
+            <Button fx:id="btnChat" text="  Messages" styleClass="sidebar-btn"
+                    onAction="#showMessages" maxWidth="Infinity" alignment="CENTER_LEFT"/>
             <Button fx:id="btnStats" text="  Seller Stats" styleClass="sidebar-btn"
                     onAction="#showStats" maxWidth="Infinity" alignment="CENTER_LEFT"/>
             <Button fx:id="btnReviews" text="  Reviews &amp; Feedback" styleClass="sidebar-btn"
@@ -47,6 +51,7 @@
             <HBox styleClass="top-bar" alignment="CENTER_LEFT" spacing="12">
                 <Label fx:id="pageTitle" text="My Listings" styleClass="section-title"/>
                 <Region HBox.hgrow="ALWAYS"/>
+                <Label fx:id="unreadLabel" styleClass="badge, badge-live"/>
                 <Label fx:id="welcomeLabel" text="" style="-fx-text-fill: #5a5a7a;"/>
             </HBox>
             <StackPane fx:id="contentPane" VBox.vgrow="ALWAYS" style="-fx-padding: 20; -fx-background-color: #f5f7fa;"/>

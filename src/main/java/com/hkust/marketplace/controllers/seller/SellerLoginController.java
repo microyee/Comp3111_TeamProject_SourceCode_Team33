@@ -3,7 +3,7 @@ package com.hkust.marketplace.controllers.seller;
 import com.hkust.marketplace.models.User;
 import com.hkust.marketplace.models.UserRole;
 import com.hkust.marketplace.utils.DummyDataService;
-import com.hkust.marketplace.utils.PasswordUtils;
+import com.hkust.marketplace.utils.MarketplaceAccounts;
 import com.hkust.marketplace.utils.SceneManager;
 import com.hkust.marketplace.utils.SessionManager;
 import javafx.fxml.FXML;
@@ -19,32 +19,18 @@ public class SellerLoginController {
 
     @FXML
     private void handleLogin() {
-        String username = usernameField.getText().trim();
-        String password = passwordField.getText();
         errorLabel.setVisible(false);
         errorLabel.setManaged(false);
 
-        if (username.isEmpty() || password.isEmpty()) {
-            showError("Please enter both username and password.");
+        User user;
+        try {
+            user = new MarketplaceAccounts(DummyDataService.getInstance()).authenticate(
+                    UserRole.SELLER, usernameField.getText(), passwordField.getText());
+        } catch (IllegalArgumentException e) {
+            showError(e.getMessage());
             return;
         }
-        User user = DummyDataService.getInstance().findUser(username);
-        if (user == null) {
-            showError("User not found.");
-            return;
-        }
-        if (user.getRole() != UserRole.SELLER) {
-            showError("This account is not a Seller account. Use the correct portal.");
-            return;
-        }
-        if (!PasswordUtils.verify(password, user.getPasswordHash())) {
-            showError("Incorrect password.");
-            return;
-        }
-        if (!user.isActive() || user.isDeleted()) {
-            showError("Account deactivated.");
-            return;
-        }
+
         SessionManager.login(user);
         SceneManager.showSellerDashboard();
     }

@@ -1,9 +1,9 @@
 package com.hkust.marketplace.controllers.seller;
 
-import com.hkust.marketplace.models.Seller;
-import com.hkust.marketplace.models.User;
+import com.hkust.marketplace.models.UserRole;
 import com.hkust.marketplace.utils.DummyDataService;
 import com.hkust.marketplace.utils.SceneManager;
+import com.hkust.marketplace.utils.MarketplaceAccounts;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
@@ -27,25 +27,14 @@ public class SellerRegisterController {
     @FXML
     private void handleRegister() {
         hideMessages();
-        String username = usernameField.getText().trim();
-        String fullName = fullNameField.getText().trim();
-        String password = passwordField.getText();
-        String confirm = confirmPasswordField.getText();
-
-        if (username.isEmpty()) { showError("Username is required."); return; }
-        if (DummyDataService.getInstance().usernameExists(username)) {
-            showError("Username already taken."); return;
+        try {
+            new MarketplaceAccounts(DummyDataService.getInstance()).register(UserRole.SELLER,
+                    usernameField.getText(), fullNameField.getText(), passwordField.getText(),
+                    confirmPasswordField.getText(), null, bioArea.getText(), meetupCombo.getValue());
+        } catch (IllegalArgumentException e) {
+            showError(e.getMessage());
+            return;
         }
-        if (fullName.isEmpty()) { showError("Full Name cannot be empty."); return; }
-        String pwdCheck = DummyDataService.checkPasswordStrength(password);
-        if (!"OK".equals(pwdCheck)) { showError(pwdCheck); return; }
-        if (!password.equals(confirm)) { showError("Passwords do not match."); return; }
-
-        // The User constructor hashes the password with a random salt.
-        User user = new Seller(username.toLowerCase(), fullName, password);
-        if (meetupCombo.getValue() != null) user.setPreferredMeetup(meetupCombo.getValue());
-        if (bioArea.getText() != null && !bioArea.getText().isBlank()) user.setBio(bioArea.getText().trim());
-        DummyDataService.getInstance().registerUser(user);
 
         showSuccess("Seller account created! You can now login.");
         usernameField.clear(); fullNameField.clear(); passwordField.clear();

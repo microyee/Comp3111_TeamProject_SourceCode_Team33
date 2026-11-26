@@ -1,0 +1,348 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AdminListingsPane.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HKUST Marketplace</a> &gt; <a href="index.source.html" class="el_package">com.hkust.marketplace.controllers.admin</a> &gt; <span class="el_source">AdminListingsPane.java</span></div><h1>AdminListingsPane.java</h1><pre class="source lang-java linenums">package com.hkust.marketplace.controllers.admin;
+
+import com.hkust.marketplace.controllers.PhotoViewer;
+import com.hkust.marketplace.models.Listing;
+import com.hkust.marketplace.models.ListingStatus;
+import com.hkust.marketplace.models.Notification;
+import com.hkust.marketplace.models.User;
+import com.hkust.marketplace.utils.DummyDataService;
+import com.hkust.marketplace.utils.ImageSupport;
+import com.hkust.marketplace.utils.SessionManager;
+import javafx.application.Platform;
+import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.collections.FXCollections;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.Node;
+import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.Label;
+import javafx.scene.control.TableCell;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableRow;
+import javafx.scene.control.TableView;
+import javafx.scene.control.TextField;
+import javafx.scene.control.Tooltip;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.VBox;
+import javafx.scene.input.MouseButton;
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+/**
+ * Task 3.7 – Manage All Listings.
+ *
+ * &lt;p&gt;Shows every listing regardless of status with keyword/status/type filters.  The
+ * admin can edit any listing, add a listing on behalf of an active seller, and take a
+ * live listing down with a required reason.  A take-down removes the listing from the
+ * marketplace, notifies the seller and every buyer with an active offer, and cancels
+ * those offers.&lt;/p&gt;
+ */
+final class AdminListingsPane extends VBox {
+
+    private final AdminDashboardController host;
+<span class="fc" id="L50">    private final DummyDataService data = DummyDataService.getInstance();</span>
+
+<span class="fc" id="L52">    private final TextField searchField = new TextField();</span>
+<span class="fc" id="L53">    private final ComboBox&lt;String&gt; statusFilter = new ComboBox&lt;&gt;();</span>
+<span class="fc" id="L54">    private final ComboBox&lt;String&gt; typeFilter = new ComboBox&lt;&gt;();</span>
+<span class="fc" id="L55">    private final Label summary = AdminUi.muted(&quot;&quot;);</span>
+<span class="fc" id="L56">    private final TableView&lt;Listing&gt; table = new TableView&lt;&gt;();</span>
+
+    AdminListingsPane(AdminDashboardController host, String highlightId) {
+<span class="fc" id="L59">        super(12);</span>
+<span class="fc" id="L60">        this.host = host;</span>
+<span class="fc" id="L61">        setPadding(new Insets(4));</span>
+
+<span class="fc" id="L63">        searchField.setPromptText(&quot;Search title, seller, category or listing ID...&quot;);</span>
+<span class="fc" id="L64">        searchField.setPrefWidth(280);</span>
+
+<span class="fc" id="L66">        statusFilter.getItems().add(&quot;All Statuses&quot;);</span>
+<span class="fc bfc" id="L67" title="All 2 branches covered.">        for (ListingStatus status : ListingStatus.values()) {</span>
+<span class="fc" id="L68">            statusFilter.getItems().add(AdminUi.statusText(status));</span>
+        }
+<span class="fc" id="L70">        statusFilter.getSelectionModel().selectFirst();</span>
+
+<span class="fc" id="L72">        typeFilter.getItems().addAll(&quot;All Types&quot;, &quot;For Sale&quot;, &quot;For Lending&quot;, &quot;Giveaway&quot;);</span>
+<span class="fc" id="L73">        typeFilter.getSelectionModel().selectFirst();</span>
+
+<span class="fc" id="L75">        Button addButton = new Button(&quot;+ Add Listing&quot;);</span>
+<span class="fc" id="L76">        addButton.getStyleClass().addAll(&quot;btn-primary&quot;, &quot;btn-sm&quot;);</span>
+<span class="fc" id="L77">        addButton.setOnAction(event -&gt; addListing());</span>
+
+<span class="fc" id="L79">        HBox toolbar = AdminUi.toolbar(searchField, statusFilter, typeFilter,</span>
+<span class="fc" id="L80">                AdminUi.spacer(), addButton);</span>
+<span class="fc" id="L81">        getChildren().addAll(toolbar, summary);</span>
+
+<span class="fc" id="L83">        buildTable();</span>
+<span class="fc" id="L84">        VBox.setVgrow(table, Priority.ALWAYS);</span>
+<span class="fc" id="L85">        getChildren().add(table);</span>
+
+<span class="fc" id="L87">        searchField.textProperty().addListener((observable, oldValue, newValue) -&gt; refresh());</span>
+<span class="fc" id="L88">        statusFilter.valueProperty().addListener((observable, oldValue, newValue) -&gt; refresh());</span>
+<span class="fc" id="L89">        typeFilter.valueProperty().addListener((observable, oldValue, newValue) -&gt; refresh());</span>
+
+<span class="fc" id="L91">        refresh();</span>
+<span class="fc bfc" id="L92" title="All 2 branches covered.">        if (highlightId != null) {</span>
+<span class="fc" id="L93">            focusListing(highlightId);</span>
+        }
+<span class="fc" id="L95">    }</span>
+
+    private void buildTable() {
+<span class="fc" id="L98">        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);</span>
+<span class="fc" id="L99">        table.setPlaceholder(AdminUi.emptyState(&quot;No listings match&quot;,</span>
+                &quot;Clear the filters or add a listing on behalf of a seller.&quot;));
+<span class="fc" id="L101">        table.setRowFactory(tableView -&gt; {</span>
+<span class="fc" id="L102">            TableRow&lt;Listing&gt; row = new TableRow&lt;&gt;();</span>
+<span class="fc" id="L103">            row.getStyleClass().add(&quot;clickable-row&quot;);</span>
+<span class="fc" id="L104">            row.setOnMouseClicked(event -&gt; {</span>
+<span class="nc bnc" id="L105" title="All 4 branches missed.">                if (event.getButton() == MouseButton.PRIMARY &amp;&amp; event.getClickCount() == 1</span>
+<span class="nc bnc" id="L106" title="All 4 branches missed.">                        &amp;&amp; !row.isEmpty() &amp;&amp; !PhotoViewer.isInteractiveTarget(event.getTarget())) {</span>
+<span class="nc" id="L107">                    Listing clicked = row.getItem();</span>
+<span class="nc" id="L108">                    Platform.runLater(() -&gt; editListing(clicked));</span>
+                }
+<span class="nc" id="L110">            });</span>
+<span class="fc" id="L111">            return row;</span>
+        });
+
+<span class="fc" id="L114">        TableColumn&lt;Listing, String&gt; photo = new TableColumn&lt;&gt;(&quot;Photo&quot;);</span>
+<span class="fc" id="L115">        photo.setPrefWidth(62);</span>
+<span class="fc" id="L116">        photo.setMinWidth(62);</span>
+<span class="fc" id="L117">        photo.setCellValueFactory(cell -&gt; new ReadOnlyObjectWrapper&lt;&gt;(</span>
+<span class="fc bfc" id="L118" title="All 2 branches covered.">                cell.getValue().getPhotoPaths().isEmpty() ? &quot;&quot; : cell.getValue().getPhotoPaths().get(0)));</span>
+<span class="fc" id="L119">        photo.setCellFactory(column -&gt; new TableCell&lt;&gt;() {</span>
+            @Override
+            protected void updateItem(String path, boolean empty) {
+<span class="fc" id="L122">                super.updateItem(path, empty);</span>
+<span class="fc" id="L123">                setText(null);</span>
+<span class="pc bpc" id="L124" title="1 of 4 branches missed.">                if (empty || path == null) {</span>
+<span class="fc" id="L125">                    setGraphic(null);</span>
+<span class="fc" id="L126">                    return;</span>
+                }
+<span class="fc" id="L128">                Node thumb = ImageSupport.thumbnail(path, 52, 40);</span>
+<span class="fc" id="L129">                Listing listing = getTableView().getItems().get(getIndex());</span>
+<span class="fc" id="L130">                int index = Math.max(0, listing.getPhotoPaths().indexOf(path));</span>
+<span class="fc" id="L131">                thumb.setOnMouseClicked(event -&gt; {</span>
+<span class="nc" id="L132">                    PhotoViewer.show(thumb, listing.getPhotoPaths(), index, listing.getTitle());</span>
+<span class="nc" id="L133">                    event.consume();</span>
+<span class="nc" id="L134">                });</span>
+<span class="fc" id="L135">                setGraphic(thumb);</span>
+<span class="fc" id="L136">            }</span>
+        });
+
+<span class="fc" id="L139">        TableColumn&lt;Listing, String&gt; title = column(&quot;Title&quot;, Listing::getTitle, 112);</span>
+<span class="fc" id="L140">        TableColumn&lt;Listing, String&gt; seller = column(&quot;Seller&quot;,</span>
+<span class="fc" id="L141">                listing -&gt; listing.getSellerFullName() + &quot; (@&quot; + listing.getSellerUsername() + &quot;)&quot;, 98);</span>
+<span class="fc" id="L142">        TableColumn&lt;Listing, String&gt; type = column(&quot;Type&quot;, Listing::getTypeDisplay, 78);</span>
+<span class="fc" id="L143">        TableColumn&lt;Listing, String&gt; category = column(&quot;Category&quot;, Listing::getCategory, 82);</span>
+<span class="fc" id="L144">        TableColumn&lt;Listing, String&gt; price = column(&quot;Price&quot;, Listing::getPriceDisplay, 78);</span>
+<span class="fc" id="L145">        TableColumn&lt;Listing, ListingStatus&gt; status = new TableColumn&lt;&gt;(&quot;Status&quot;);</span>
+<span class="fc" id="L146">        status.setPrefWidth(104);</span>
+<span class="fc" id="L147">        status.setMinWidth(104);</span>
+<span class="fc" id="L148">        status.setCellValueFactory(cell -&gt; new ReadOnlyObjectWrapper&lt;&gt;(cell.getValue().getStatus()));</span>
+<span class="fc" id="L149">        status.setCellFactory(column -&gt; new TableCell&lt;&gt;() {</span>
+            @Override
+            protected void updateItem(ListingStatus value, boolean empty) {
+<span class="fc" id="L152">                super.updateItem(value, empty);</span>
+<span class="fc" id="L153">                setText(null);</span>
+<span class="pc bpc" id="L154" title="1 of 4 branches missed.">                setGraphic(empty || value == null ? null</span>
+<span class="fc" id="L155">                        : AdminUi.badge(AdminUi.statusShortText(value), AdminUi.statusStyle(value)));</span>
+<span class="fc" id="L156">            }</span>
+        });
+
+<span class="fc" id="L159">        TableColumn&lt;Listing, String&gt; posted = column(&quot;Posted&quot;,</span>
+<span class="fc bfc" id="L160" title="All 2 branches covered.">                listing -&gt; AdminUi.formatDate(listing.getPostedAt() == null</span>
+<span class="fc" id="L161">                        ? null : listing.getPostedAt().toLocalDate()), 76);</span>
+
+<span class="fc" id="L163">        TableColumn&lt;Listing, Void&gt; actions = new TableColumn&lt;&gt;(&quot;Actions&quot;);</span>
+<span class="fc" id="L164">        actions.setPrefWidth(190);</span>
+<span class="fc" id="L165">        actions.setMinWidth(190);</span>
+<span class="fc" id="L166">        actions.setCellFactory(column -&gt; new TableCell&lt;&gt;() {</span>
+            @Override
+            protected void updateItem(Void value, boolean empty) {
+<span class="fc" id="L169">                super.updateItem(value, empty);</span>
+<span class="pc bpc" id="L170" title="2 of 6 branches missed.">                if (empty || getIndex() &lt; 0 || getIndex() &gt;= getTableView().getItems().size()) {</span>
+<span class="fc" id="L171">                    setGraphic(null);</span>
+<span class="fc" id="L172">                    return;</span>
+                }
+<span class="fc" id="L174">                Listing listing = getTableView().getItems().get(getIndex());</span>
+<span class="fc" id="L175">                Button edit = new Button(&quot;Edit&quot;);</span>
+<span class="fc" id="L176">                edit.getStyleClass().addAll(&quot;btn-outline&quot;, &quot;btn-sm&quot;);</span>
+<span class="pc" id="L177">                edit.setOnAction(event -&gt; editListing(listing));</span>
+
+<span class="fc" id="L179">                Button takeDown = new Button(&quot;Take Down&quot;);</span>
+<span class="fc" id="L180">                takeDown.getStyleClass().addAll(&quot;btn-danger&quot;, &quot;btn-sm&quot;);</span>
+<span class="fc bfc" id="L181" title="All 2 branches covered.">                takeDown.setDisable(listing.getStatus() != ListingStatus.LIVE);</span>
+<span class="fc" id="L182">                takeDown.setTooltip(new Tooltip(&quot;Only live listings can be taken down&quot;));</span>
+<span class="pc" id="L183">                takeDown.setOnAction(event -&gt; takeDownListing(listing));</span>
+
+<span class="fc" id="L185">                HBox box = new HBox(6, edit, takeDown);</span>
+<span class="fc" id="L186">                box.setAlignment(Pos.CENTER_LEFT);</span>
+<span class="fc" id="L187">                setGraphic(box);</span>
+<span class="fc" id="L188">            }</span>
+        });
+
+<span class="fc" id="L191">        table.getColumns().addAll(photo, title, seller, type, category, price, status, posted, actions);</span>
+<span class="fc" id="L192">    }</span>
+
+    private static &lt;T&gt; TableColumn&lt;Listing, T&gt; column(
+            String title, Function&lt;Listing, T&gt; value, double width) {
+<span class="fc" id="L196">        TableColumn&lt;Listing, T&gt; column = new TableColumn&lt;&gt;(title);</span>
+<span class="fc" id="L197">        column.setCellValueFactory(cell -&gt; new ReadOnlyObjectWrapper&lt;&gt;(value.apply(cell.getValue())));</span>
+<span class="fc" id="L198">        column.setPrefWidth(width);</span>
+<span class="fc" id="L199">        return column;</span>
+    }
+
+    private void refresh() {
+<span class="pc bpc" id="L203" title="1 of 2 branches missed.">        String query = searchField.getText() == null ? &quot;&quot; : searchField.getText().trim().toLowerCase();</span>
+<span class="fc" id="L204">        String wantedStatus = statusFilter.getValue();</span>
+<span class="fc" id="L205">        String wantedType = typeFilter.getValue();</span>
+
+<span class="fc" id="L207">        List&lt;Listing&gt; filtered = new ArrayList&lt;&gt;(data.getAllListings()).stream()</span>
+<span class="fc" id="L208">                .filter(listing -&gt; matchesQuery(listing, query))</span>
+<span class="pc bpc" id="L209" title="1 of 4 branches missed.">                .filter(listing -&gt; wantedStatus == null || &quot;All Statuses&quot;.equals(wantedStatus)</span>
+<span class="fc bfc" id="L210" title="All 2 branches covered.">                        || AdminUi.statusText(listing.getStatus()).equals(wantedStatus))</span>
+<span class="pc bpc" id="L211" title="1 of 4 branches missed.">                .filter(listing -&gt; wantedType == null || &quot;All Types&quot;.equals(wantedType)</span>
+<span class="fc bfc" id="L212" title="All 2 branches covered.">                        || listing.getTypeDisplay().equals(wantedType))</span>
+<span class="fc" id="L213">                .sorted(Comparator.comparing(Listing::getPostedAt,</span>
+<span class="fc" id="L214">                        Comparator.nullsLast(Comparator.naturalOrder())).reversed())</span>
+<span class="fc" id="L215">                .collect(Collectors.toList());</span>
+
+<span class="fc" id="L217">        table.setItems(FXCollections.observableArrayList(filtered));</span>
+<span class="fc" id="L218">        summary.setText(filtered.size() + &quot; listing(s) shown&quot;);</span>
+<span class="fc" id="L219">    }</span>
+
+    private boolean matchesQuery(Listing listing, String query) {
+<span class="fc bfc" id="L222" title="All 2 branches covered.">        if (query.isEmpty()) return true;</span>
+<span class="fc bfc" id="L223" title="All 2 branches covered.">        return contains(listing.getId(), query)</span>
+<span class="fc bfc" id="L224" title="All 2 branches covered.">                || contains(listing.getTitle(), query)</span>
+<span class="fc bfc" id="L225" title="All 2 branches covered.">                || contains(listing.getSellerUsername(), query)</span>
+<span class="fc bfc" id="L226" title="All 2 branches covered.">                || contains(listing.getSellerFullName(), query)</span>
+<span class="fc bfc" id="L227" title="All 2 branches covered.">                || contains(listing.getCategory(), query)</span>
+<span class="fc bfc" id="L228" title="All 2 branches covered.">                || contains(listing.getDescription(), query);</span>
+    }
+
+    private boolean contains(String value, String query) {
+<span class="fc bfc" id="L232" title="All 4 branches covered.">        return value != null &amp;&amp; value.toLowerCase().contains(query);</span>
+    }
+
+    private void focusListing(String listingId) {
+<span class="fc" id="L236">        searchField.setText(listingId);</span>
+<span class="fc" id="L237">        refresh();</span>
+<span class="fc bfc" id="L238" title="All 2 branches covered.">        for (int i = 0; i &lt; table.getItems().size(); i++) {</span>
+<span class="fc bfc" id="L239" title="All 2 branches covered.">            if (listingId.equalsIgnoreCase(table.getItems().get(i).getId())) {</span>
+<span class="fc" id="L240">                table.getSelectionModel().select(i);</span>
+<span class="fc" id="L241">                table.scrollTo(i);</span>
+<span class="fc" id="L242">                break;</span>
+            }
+        }
+<span class="fc" id="L245">    }</span>
+
+    private void addListing() {
+<span class="fc" id="L248">        List&lt;User&gt; sellers = data.getActiveSellers();</span>
+<span class="pc bpc" id="L249" title="1 of 2 branches missed.">        if (sellers.isEmpty()) {</span>
+<span class="nc" id="L250">            AdminDialogs.warn(&quot;No active sellers&quot;,</span>
+                    &quot;Create or reactivate a seller account before adding a listing on their behalf.&quot;);
+<span class="nc" id="L252">            return;</span>
+        }
+
+<span class="fc" id="L255">        AdminListingFormDialog dialog = new AdminListingFormDialog(</span>
+<span class="fc" id="L256">                AdminUi.window(this), null, sellers);</span>
+<span class="fc" id="L257">        dialog.showAndWait().ifPresent(listing -&gt; {</span>
+<span class="fc" id="L258">            data.addListing(listing);</span>
+<span class="fc" id="L259">            data.addNotification(new Notification(listing.getSellerUsername(),</span>
+                    &quot;Listing Created by Admin&quot;,
+<span class="fc" id="L261">                    &quot;An administrator created '&quot; + listing.getTitle() + &quot;' on your behalf. &quot;</span>
+                            + &quot;It is pending review.&quot;,
+<span class="fc" id="L263">                    &quot;System&quot;, &quot;LISTINGS&quot;, listing.getId()));</span>
+<span class="fc" id="L264">            data.addNotification(new Notification(adminUsername(), &quot;Listing Created&quot;,</span>
+<span class="fc" id="L265">                    &quot;You created '&quot; + listing.getTitle() + &quot;' for @&quot; + listing.getSellerUsername() + &quot;.&quot;,</span>
+<span class="fc" id="L266">                    &quot;System&quot;, &quot;LISTINGS&quot;, listing.getId()));</span>
+<span class="fc" id="L267">            data.logAudit(adminUsername(), &quot;CREATE_LISTING&quot;, &quot;LISTING&quot;, listing.getId(),</span>
+<span class="fc" id="L268">                    listing.getTitle() + &quot; for @&quot; + listing.getSellerUsername());</span>
+<span class="fc" id="L269">            host.refreshUnreadBadge();</span>
+<span class="fc" id="L270">            refresh();</span>
+<span class="fc" id="L271">            AdminDialogs.info(&quot;Listing created&quot;,</span>
+                    &quot;Status: Pending Review. It will appear in Listing Review for approval.&quot;);
+<span class="fc" id="L273">        });</span>
+<span class="fc" id="L274">    }</span>
+
+    private void editListing(Listing listing) {
+<span class="fc" id="L277">        Listing current = data.findListing(listing.getId());</span>
+<span class="fc bfc" id="L278" title="All 2 branches covered.">        if (current == null) {</span>
+<span class="fc" id="L279">            AdminDialogs.warn(&quot;Listing no longer available&quot;,</span>
+                    &quot;This listing was removed. The table has been refreshed.&quot;);
+<span class="fc" id="L281">            refresh();</span>
+<span class="fc" id="L282">            return;</span>
+        }
+
+<span class="fc" id="L285">        AdminListingFormDialog dialog = new AdminListingFormDialog(</span>
+<span class="fc" id="L286">                AdminUi.window(this), current, null);</span>
+<span class="fc" id="L287">        dialog.showAndWait().ifPresent(updated -&gt; {</span>
+<span class="pc bpc" id="L288" title="1 of 2 branches missed.">            if (data.findListing(updated.getId()) == null) {</span>
+<span class="nc" id="L289">                AdminDialogs.warn(&quot;Listing no longer available&quot;,</span>
+                        &quot;The listing was removed while you were editing it. The table has been refreshed.&quot;);
+<span class="nc" id="L291">                refresh();</span>
+<span class="nc" id="L292">                return;</span>
+            }
+<span class="fc" id="L294">            data.updateListing(updated);</span>
+<span class="fc" id="L295">            data.logAudit(adminUsername(), &quot;EDIT_LISTING&quot;, &quot;LISTING&quot;, updated.getId(),</span>
+<span class="fc" id="L296">                    updated.getTitle());</span>
+<span class="fc" id="L297">            refresh();</span>
+<span class="fc" id="L298">            AdminDialogs.info(&quot;Listing updated&quot;,</span>
+                    &quot;The listing details were saved and its status was kept as &quot;
+<span class="fc" id="L300">                            + AdminUi.statusText(updated.getStatus()) + &quot;.&quot;);</span>
+<span class="fc" id="L301">        });</span>
+<span class="fc" id="L302">    }</span>
+
+    private void takeDownListing(Listing listing) {
+<span class="fc" id="L305">        Listing current = data.findListing(listing.getId());</span>
+<span class="pc bpc" id="L306" title="1 of 4 branches missed.">        if (current == null || current.getStatus() != ListingStatus.LIVE) {</span>
+<span class="fc" id="L307">            AdminDialogs.warn(&quot;Listing no longer live&quot;,</span>
+                    &quot;Only a live listing can be taken down. The table has been refreshed.&quot;);
+<span class="fc" id="L309">            refresh();</span>
+<span class="fc" id="L310">            return;</span>
+        }
+
+<span class="fc" id="L313">        Optional&lt;String&gt; reason = AdminDialogs.promptReason(</span>
+<span class="fc" id="L314">                &quot;Take down '&quot; + current.getTitle() + &quot;'&quot;,</span>
+                &quot;Taking this listing down removes it from the marketplace and notifies the seller &quot;
+                        + &quot;and every buyer with an active offer. Their offers will be cancelled.&quot;,
+                &quot;Removal reason (required)&quot;);
+<span class="fc bfc" id="L318" title="All 2 branches covered.">        if (reason.isEmpty()) {</span>
+<span class="fc" id="L319">            return;</span>
+        }
+<span class="pc bpc" id="L321" title="1 of 2 branches missed.">        if (!AdminDialogs.confirmDestructive(&quot;Confirm take down&quot;,</span>
+<span class="fc" id="L322">                &quot;Remove '&quot; + current.getTitle() + &quot;' from the marketplace?\n\nReason: &quot;</span>
+<span class="fc" id="L323">                        + reason.get(),</span>
+                &quot;Take Down&quot;)) {
+<span class="nc" id="L325">            return;</span>
+        }
+
+<span class="fc" id="L328">        int cancelled = data.takeDownListing(current.getId(), reason.get(), adminUsername());</span>
+<span class="fc bfc" id="L329" title="All 2 branches covered.">        if (cancelled &lt; 0) {</span>
+<span class="fc" id="L330">            AdminDialogs.warn(&quot;Listing no longer live&quot;,</span>
+                    &quot;The listing changed while you were confirming. The table has been refreshed.&quot;);
+<span class="fc" id="L332">            refresh();</span>
+<span class="fc" id="L333">            return;</span>
+        }
+
+<span class="fc" id="L336">        host.refreshUnreadBadge();</span>
+<span class="fc" id="L337">        refresh();</span>
+<span class="fc" id="L338">        AdminDialogs.info(&quot;Listing removed&quot;,</span>
+                &quot;The seller was notified and &quot; + cancelled
+                        + &quot; active offer(s) were cancelled (buyers notified).&quot;);
+<span class="fc" id="L341">    }</span>
+
+    private String adminUsername() {
+<span class="fc" id="L344">        User user = SessionManager.getCurrentUser();</span>
+<span class="pc bpc" id="L345" title="1 of 2 branches missed.">        return user == null ? DummyDataService.ADMIN_USERNAME : user.getUsername();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

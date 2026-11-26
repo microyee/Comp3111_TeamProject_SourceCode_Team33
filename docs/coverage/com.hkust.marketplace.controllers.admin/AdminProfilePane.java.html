@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AdminProfilePane.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HKUST Marketplace</a> &gt; <a href="index.source.html" class="el_package">com.hkust.marketplace.controllers.admin</a> &gt; <span class="el_source">AdminProfilePane.java</span></div><h1>AdminProfilePane.java</h1><pre class="source lang-java linenums">package com.hkust.marketplace.controllers.admin;
+
+import com.hkust.marketplace.models.User;
+import com.hkust.marketplace.utils.DummyDataService;
+import com.hkust.marketplace.utils.PasswordUtils;
+import com.hkust.marketplace.utils.SessionManager;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.PasswordField;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.control.TextField;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.VBox;
+
+/**
+ * Task 3.4 – Manage Own Profile.
+ *
+ * &lt;p&gt;The admin can change their full name and, optionally, their password.  A password
+ * change requires the current password, a new password that passes the shared strength
+ * rule, and a matching confirmation.  New passwords are stored as salted PBKDF2
+ * hashes, never as plaintext.&lt;/p&gt;
+ */
+final class AdminProfilePane extends VBox {
+
+    private final AdminDashboardController host;
+    private final User user;
+
+<span class="fc" id="L31">    private final TextField fullNameField = new TextField();</span>
+<span class="fc" id="L32">    private final PasswordField currentPasswordField = new PasswordField();</span>
+<span class="fc" id="L33">    private final PasswordField newPasswordField = new PasswordField();</span>
+<span class="fc" id="L34">    private final PasswordField confirmPasswordField = new PasswordField();</span>
+<span class="fc" id="L35">    private final Label errorLabel = AdminUi.errorLabel();</span>
+<span class="fc" id="L36">    private final Label successLabel = AdminUi.successLabel();</span>
+<span class="fc" id="L37">    private final Button saveButton = new Button(&quot;Save Changes&quot;);</span>
+
+    AdminProfilePane(AdminDashboardController host) {
+<span class="fc" id="L40">        super(12);</span>
+<span class="fc" id="L41">        this.host = host;</span>
+<span class="fc" id="L42">        this.user = SessionManager.getCurrentUser();</span>
+<span class="fc" id="L43">        setPadding(new Insets(4));</span>
+
+<span class="fc" id="L45">        VBox form = new VBox(10);</span>
+<span class="fc" id="L46">        form.getStyleClass().add(&quot;card&quot;);</span>
+<span class="fc" id="L47">        form.setPadding(new Insets(18));</span>
+<span class="fc" id="L48">        form.setMaxWidth(540);</span>
+
+<span class="fc" id="L50">        Label title = new Label(&quot;Admin Profile&quot;);</span>
+<span class="fc" id="L51">        title.getStyleClass().add(&quot;section-title&quot;);</span>
+
+<span class="fc bfc" id="L53" title="All 2 branches covered.">        Label username = new Label(user == null ? &quot;—&quot; : user.getUsername());</span>
+<span class="fc" id="L54">        username.setStyle(&quot;-fx-font-weight: 600;&quot;);</span>
+<span class="fc" id="L55">        Label role = new Label(&quot;Administrator&quot;);</span>
+<span class="fc" id="L56">        role.setStyle(&quot;-fx-font-weight: 600;&quot;);</span>
+<span class="pc bpc" id="L57" title="1 of 4 branches missed.">        Label memberSince = new Label(user == null || user.getCreatedAt() == null</span>
+<span class="fc" id="L58">                ? &quot;—&quot; : AdminUi.formatDate(user.getCreatedAt().toLocalDate()));</span>
+
+<span class="fc" id="L60">        Label intro = AdminUi.muted(&quot;Your username and role are fixed. You may update your &quot;</span>
+                + &quot;display name and change your password below.&quot;);
+<span class="fc" id="L62">        intro.setWrapText(true);</span>
+
+<span class="fc" id="L64">        form.getChildren().addAll(title, intro,</span>
+<span class="fc" id="L65">                AdminUi.fieldLabel(&quot;Username&quot;), username,</span>
+<span class="fc" id="L66">                AdminUi.fieldLabel(&quot;Role&quot;), role,</span>
+<span class="fc" id="L67">                AdminUi.fieldLabel(&quot;Member since&quot;), memberSince);</span>
+
+<span class="fc bfc" id="L69" title="All 2 branches covered.">        fullNameField.setText(user == null ? &quot;&quot; : user.getFullName());</span>
+<span class="fc" id="L70">        fullNameField.setPromptText(&quot;Full name *&quot;);</span>
+<span class="fc" id="L71">        form.getChildren().addAll(AdminUi.fieldLabel(&quot;Full Name *&quot;), fullNameField);</span>
+
+<span class="fc" id="L73">        Label passwordHeading = new Label(&quot;Change Password (optional)&quot;);</span>
+<span class="fc" id="L74">        passwordHeading.setStyle(&quot;-fx-font-weight: bold; -fx-font-size: 14px; &quot;</span>
+                + &quot;-fx-text-fill: #003974; -fx-padding: 8 0 0 0;&quot;);
+
+<span class="fc" id="L77">        currentPasswordField.setPromptText(&quot;Current password&quot;);</span>
+<span class="fc" id="L78">        newPasswordField.setPromptText(&quot;New password&quot;);</span>
+<span class="fc" id="L79">        confirmPasswordField.setPromptText(&quot;Confirm new password&quot;);</span>
+
+<span class="fc" id="L81">        form.getChildren().addAll(passwordHeading,</span>
+<span class="fc" id="L82">                AdminUi.hint(&quot;Leave all three password fields blank to keep the current password. &quot;</span>
+                        + &quot;A new password must contain at least 8 characters, an uppercase letter, &quot;
+                        + &quot;a lowercase letter and a digit.&quot;),
+<span class="fc" id="L85">                AdminUi.fieldLabel(&quot;Current Password&quot;), currentPasswordField,</span>
+<span class="fc" id="L86">                AdminUi.fieldLabel(&quot;New Password&quot;), newPasswordField,</span>
+<span class="fc" id="L87">                AdminUi.fieldLabel(&quot;Confirm New Password&quot;), confirmPasswordField,</span>
+                errorLabel, successLabel);
+
+<span class="fc" id="L90">        saveButton.getStyleClass().add(&quot;btn-success&quot;);</span>
+<span class="fc" id="L91">        saveButton.setOnAction(event -&gt; saveProfile());</span>
+
+<span class="fc" id="L93">        HBox actions = new HBox(10, saveButton);</span>
+<span class="fc" id="L94">        actions.setAlignment(Pos.CENTER_RIGHT);</span>
+<span class="fc" id="L95">        form.getChildren().add(actions);</span>
+
+<span class="fc" id="L97">        ScrollPane scroll = AdminUi.scroll(form);</span>
+<span class="fc" id="L98">        VBox.setVgrow(scroll, Priority.ALWAYS);</span>
+<span class="fc" id="L99">        getChildren().add(scroll);</span>
+<span class="fc" id="L100">    }</span>
+
+    private void saveProfile() {
+<span class="fc" id="L103">        AdminUi.clear(errorLabel, successLabel);</span>
+
+<span class="fc bfc" id="L105" title="All 2 branches covered.">        if (user == null) {</span>
+<span class="fc" id="L106">            AdminUi.setMessage(errorLabel, &quot;No admin session is active. Please log in again.&quot;, true);</span>
+<span class="fc" id="L107">            return;</span>
+        }
+
+<span class="pc bpc" id="L110" title="1 of 2 branches missed.">        String fullName = fullNameField.getText() == null ? &quot;&quot; : fullNameField.getText().trim();</span>
+<span class="fc bfc" id="L111" title="All 2 branches covered.">        if (fullName.isEmpty()) {</span>
+<span class="fc" id="L112">            AdminUi.setMessage(errorLabel, &quot;Full Name cannot be empty.&quot;, true);</span>
+<span class="fc" id="L113">            return;</span>
+        }
+<span class="fc bfc" id="L115" title="All 2 branches covered.">        if (fullName.length() &gt; 80) {</span>
+<span class="fc" id="L116">            AdminUi.setMessage(errorLabel, &quot;Full Name must be 80 characters or fewer.&quot;, true);</span>
+<span class="fc" id="L117">            return;</span>
+        }
+
+<span class="pc bpc" id="L120" title="1 of 2 branches missed.">        String current = currentPasswordField.getText() == null ? &quot;&quot; : currentPasswordField.getText();</span>
+<span class="pc bpc" id="L121" title="1 of 2 branches missed.">        String newPassword = newPasswordField.getText() == null ? &quot;&quot; : newPasswordField.getText();</span>
+<span class="pc bpc" id="L122" title="1 of 2 branches missed.">        String confirm = confirmPasswordField.getText() == null ? &quot;&quot; : confirmPasswordField.getText();</span>
+<span class="pc bpc" id="L123" title="1 of 6 branches missed.">        boolean changingPassword = !current.isEmpty() || !newPassword.isEmpty() || !confirm.isEmpty();</span>
+
+<span class="fc bfc" id="L125" title="All 2 branches covered.">        if (changingPassword) {</span>
+<span class="fc bfc" id="L126" title="All 2 branches covered.">            if (newPassword.isEmpty()) {</span>
+<span class="fc" id="L127">                AdminUi.setMessage(errorLabel,</span>
+                        &quot;Enter a new password, or clear the password fields to keep the current one.&quot;,
+                        true);
+<span class="fc" id="L130">                return;</span>
+            }
+<span class="fc bfc" id="L132" title="All 2 branches covered.">            if (current.isEmpty()) {</span>
+<span class="fc" id="L133">                AdminUi.setMessage(errorLabel, &quot;Enter your current password to change it.&quot;, true);</span>
+<span class="fc" id="L134">                return;</span>
+            }
+<span class="fc bfc" id="L136" title="All 2 branches covered.">            if (!PasswordUtils.verify(current, user.getPasswordHash())) {</span>
+<span class="fc" id="L137">                AdminUi.setMessage(errorLabel, &quot;Current password is incorrect.&quot;, true);</span>
+<span class="fc" id="L138">                return;</span>
+            }
+<span class="fc" id="L140">            String strength = DummyDataService.checkPasswordStrength(newPassword);</span>
+<span class="fc bfc" id="L141" title="All 2 branches covered.">            if (!&quot;OK&quot;.equals(strength)) {</span>
+<span class="fc" id="L142">                AdminUi.setMessage(errorLabel, strength, true);</span>
+<span class="fc" id="L143">                return;</span>
+            }
+<span class="fc bfc" id="L145" title="All 2 branches covered.">            if (!newPassword.equals(confirm)) {</span>
+<span class="fc" id="L146">                AdminUi.setMessage(errorLabel,</span>
+                        &quot;New password and confirmation do not match.&quot;, true);
+<span class="fc" id="L148">                return;</span>
+            }
+        }
+
+<span class="fc" id="L152">        user.setFullName(fullName);</span>
+<span class="fc bfc" id="L153" title="All 2 branches covered.">        if (changingPassword) {</span>
+<span class="fc" id="L154">            user.setPasswordHash(PasswordUtils.hash(newPassword));</span>
+        }
+<span class="fc" id="L156">        DummyDataService.getInstance().updateUser(user);</span>
+<span class="fc" id="L157">        DummyDataService.getInstance().logAudit(user.getUsername(), &quot;UPDATE_PROFILE&quot;,</span>
+<span class="fc" id="L158">                &quot;USER&quot;, user.getUsername(),</span>
+<span class="fc bfc" id="L159" title="All 2 branches covered.">                changingPassword ? &quot;Updated full name and password&quot; : &quot;Updated full name&quot;);</span>
+
+<span class="fc" id="L161">        AdminUi.setMessage(successLabel,</span>
+<span class="fc bfc" id="L162" title="All 2 branches covered.">                changingPassword</span>
+<span class="fc" id="L163">                        ? &quot;Profile updated. Your password was changed and hashed.&quot;</span>
+<span class="fc" id="L164">                        : &quot;Profile updated successfully.&quot;,</span>
+                false);
+<span class="fc" id="L166">        currentPasswordField.clear();</span>
+<span class="fc" id="L167">        newPasswordField.clear();</span>
+<span class="fc" id="L168">        confirmPasswordField.clear();</span>
+<span class="fc" id="L169">        host.refreshWelcome();</span>
+<span class="fc" id="L170">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

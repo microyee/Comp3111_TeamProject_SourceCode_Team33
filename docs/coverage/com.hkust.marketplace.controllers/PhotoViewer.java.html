@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PhotoViewer.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HKUST Marketplace</a> &gt; <a href="index.source.html" class="el_package">com.hkust.marketplace.controllers</a> &gt; <span class="el_source">PhotoViewer.java</span></div><h1>PhotoViewer.java</h1><pre class="source lang-java linenums">package com.hkust.marketplace.controllers;
+
+import com.hkust.marketplace.utils.ImageSupport;
+import javafx.application.Platform;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.Node;
+import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.Dialog;
+import javafx.scene.control.Label;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.control.TextInputControl;
+import javafx.scene.control.ButtonBase;
+import javafx.scene.control.ComboBoxBase;
+import javafx.scene.control.Hyperlink;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.ScrollEvent;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Modal photo viewer with zoom controls, mouse-wheel zoom and previous/next navigation.
+ * Opened by clicking any listing photo in the buyer/seller/admin screens.
+ */
+public final class PhotoViewer {
+
+    private static final double VIEW_WIDTH = 900;
+    private static final double VIEW_HEIGHT = 530;
+    private static final double MIN_ZOOM = 0.35;
+    private static final double MAX_ZOOM = 4.0;
+
+    private PhotoViewer() {
+    }
+
+    public static void show(Node owner, List&lt;String&gt; photoPaths, int initialIndex, String title) {
+<span class="fc bfc" id="L45" title="All 2 branches covered.">        List&lt;String&gt; copy = photoPaths == null ? List.of() : List.copyOf(photoPaths);</span>
+        // Defer the modal so a click that arrives during a page/hover animation cannot
+        // call showAndWait during animation or layout processing.
+<span class="fc" id="L48">        Platform.runLater(() -&gt; showNow(owner, copy, initialIndex, title));</span>
+<span class="fc" id="L49">    }</span>
+
+    private static void showNow(Node owner, List&lt;String&gt; photoPaths, int initialIndex, String title) {
+<span class="fc" id="L52">        List&lt;String&gt; photos = new ArrayList&lt;&gt;();</span>
+<span class="pc bpc" id="L53" title="1 of 2 branches missed.">        if (photoPaths != null) {</span>
+<span class="fc bfc" id="L54" title="All 2 branches covered.">            for (String path : photoPaths) {</span>
+<span class="pc bpc" id="L55" title="1 of 4 branches missed.">                if (path != null &amp;&amp; !path.isBlank()) photos.add(path);</span>
+<span class="fc" id="L56">            }</span>
+        }
+
+<span class="fc" id="L59">        Dialog&lt;ButtonType&gt; dialog = new Dialog&lt;&gt;();</span>
+<span class="fc" id="L60">        PortalUi.style(dialog, owner);</span>
+<span class="fc" id="L61">        dialog.setTitle(&quot;View photos&quot;);</span>
+<span class="fc" id="L62">        dialog.setHeaderText(null);</span>
+<span class="fc" id="L63">        dialog.setResizable(true);</span>
+<span class="fc" id="L64">        dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);</span>
+<span class="fc" id="L65">        dialog.getDialogPane().setPrefSize(1040, 760);</span>
+<span class="fc" id="L66">        dialog.getDialogPane().setMinSize(760, 560);</span>
+<span class="fc" id="L67">        dialog.getDialogPane().getStyleClass().add(&quot;photo-viewer-dialog&quot;);</span>
+
+<span class="fc" id="L69">        int[] index = {Math.max(0, Math.min(initialIndex, Math.max(0, photos.size() - 1)))};</span>
+<span class="fc" id="L70">        double[] baseSize = {0, 0};</span>
+<span class="fc" id="L71">        double[] zoom = {1.0};</span>
+
+<span class="fc bfc" id="L73" title="All 4 branches covered.">        Label titleLabel = new Label(title == null || title.isBlank() ? &quot;Listing photos&quot; : title);</span>
+<span class="fc" id="L74">        titleLabel.getStyleClass().add(&quot;section-title&quot;);</span>
+<span class="fc" id="L75">        Label count = new Label();</span>
+<span class="fc" id="L76">        count.getStyleClass().add(&quot;photo-viewer-count&quot;);</span>
+<span class="fc" id="L77">        Region headerSpacer = new Region();</span>
+<span class="fc" id="L78">        HBox.setHgrow(headerSpacer, Priority.ALWAYS);</span>
+<span class="fc" id="L79">        HBox header = new HBox(12, titleLabel, headerSpacer, count);</span>
+<span class="fc" id="L80">        header.setAlignment(Pos.CENTER_LEFT);</span>
+
+<span class="fc" id="L82">        ImageView view = new ImageView();</span>
+<span class="fc" id="L83">        view.setPreserveRatio(true);</span>
+<span class="fc" id="L84">        view.setSmooth(true);</span>
+<span class="fc" id="L85">        view.getStyleClass().add(&quot;photo-viewer-image&quot;);</span>
+
+<span class="fc" id="L87">        Label placeholder = new Label(&quot;No photo available&quot;);</span>
+<span class="fc" id="L88">        placeholder.getStyleClass().add(&quot;muted&quot;);</span>
+<span class="fc" id="L89">        StackPane canvas = new StackPane(view, placeholder);</span>
+<span class="fc" id="L90">        canvas.getStyleClass().add(&quot;photo-viewer-canvas&quot;);</span>
+<span class="fc" id="L91">        canvas.setAlignment(Pos.CENTER);</span>
+
+<span class="fc" id="L93">        ScrollPane scroll = new ScrollPane(canvas);</span>
+<span class="fc" id="L94">        scroll.setPannable(true);</span>
+<span class="fc" id="L95">        scroll.getStyleClass().add(&quot;photo-viewer-scroll&quot;);</span>
+<span class="fc" id="L96">        scroll.setFitToWidth(false);</span>
+<span class="fc" id="L97">        scroll.setFitToHeight(false);</span>
+<span class="fc" id="L98">        VBox.setVgrow(scroll, Priority.ALWAYS);</span>
+
+<span class="fc" id="L100">        Label zoomLabel = new Label(&quot;100%&quot;);</span>
+<span class="fc" id="L101">        zoomLabel.getStyleClass().add(&quot;photo-viewer-count&quot;);</span>
+
+<span class="fc" id="L103">        Button previous = new Button(&quot;‹&quot;);</span>
+<span class="fc" id="L104">        previous.getStyleClass().addAll(&quot;btn-outline&quot;, &quot;btn-sm&quot;);</span>
+<span class="fc" id="L105">        Button next = new Button(&quot;›&quot;);</span>
+<span class="fc" id="L106">        next.getStyleClass().addAll(&quot;btn-outline&quot;, &quot;btn-sm&quot;);</span>
+<span class="fc" id="L107">        Button zoomOut = new Button(&quot;−&quot;);</span>
+<span class="fc" id="L108">        zoomOut.getStyleClass().addAll(&quot;btn-outline&quot;, &quot;btn-sm&quot;);</span>
+<span class="fc" id="L109">        Button reset = new Button(&quot;Reset&quot;);</span>
+<span class="fc" id="L110">        reset.getStyleClass().addAll(&quot;btn-outline&quot;, &quot;btn-sm&quot;);</span>
+<span class="fc" id="L111">        Button zoomIn = new Button(&quot;+&quot;);</span>
+<span class="fc" id="L112">        zoomIn.getStyleClass().addAll(&quot;btn-outline&quot;, &quot;btn-sm&quot;);</span>
+
+<span class="fc" id="L114">        Runnable render = () -&gt; {</span>
+<span class="fc bfc" id="L115" title="All 2 branches covered.">            Image image = photos.isEmpty() ? null : ImageSupport.loadOriginal(photos.get(index[0]));</span>
+<span class="fc" id="L116">            view.setImage(image);</span>
+<span class="fc bfc" id="L117" title="All 2 branches covered.">            boolean hasImage = image != null;</span>
+<span class="fc" id="L118">            view.setVisible(hasImage);</span>
+<span class="fc bfc" id="L119" title="All 2 branches covered.">            placeholder.setVisible(!hasImage);</span>
+<span class="fc bfc" id="L120" title="All 2 branches covered.">            count.setText(photos.isEmpty() ? &quot;No photos&quot; : (index[0] + 1) + &quot; / &quot; + photos.size());</span>
+<span class="fc bfc" id="L121" title="All 2 branches covered.">            previous.setDisable(index[0] &lt;= 0);</span>
+<span class="fc bfc" id="L122" title="All 4 branches covered.">            next.setDisable(photos.isEmpty() || index[0] &gt;= photos.size() - 1);</span>
+<span class="fc" id="L123">            zoomLabel.setText(Math.round(zoom[0] * 100) + &quot;%&quot;);</span>
+
+<span class="fc bfc" id="L125" title="All 2 branches covered.">            if (!hasImage) {</span>
+<span class="fc" id="L126">                canvas.setPrefSize(640, 420);</span>
+<span class="fc" id="L127">                canvas.setMinSize(640, 420);</span>
+<span class="fc" id="L128">                return;</span>
+            }
+
+<span class="fc" id="L131">            double fit = Math.min(VIEW_WIDTH / image.getWidth(), VIEW_HEIGHT / image.getHeight());</span>
+<span class="fc" id="L132">            fit = Math.min(fit, 1.0);</span>
+<span class="fc" id="L133">            baseSize[0] = image.getWidth() * fit;</span>
+<span class="fc" id="L134">            baseSize[1] = image.getHeight() * fit;</span>
+<span class="fc" id="L135">            applyZoom(view, canvas, baseSize, zoom[0]);</span>
+<span class="fc" id="L136">        };</span>
+
+<span class="fc" id="L138">        previous.setOnAction(event -&gt; {</span>
+<span class="pc bpc" id="L139" title="1 of 2 branches missed.">            if (index[0] &gt; 0) {</span>
+<span class="fc" id="L140">                index[0]--;</span>
+<span class="fc" id="L141">                zoom[0] = 1.0;</span>
+<span class="fc" id="L142">                render.run();</span>
+            }
+<span class="fc" id="L144">        });</span>
+<span class="fc" id="L145">        next.setOnAction(event -&gt; {</span>
+<span class="pc bpc" id="L146" title="1 of 2 branches missed.">            if (index[0] &lt; photos.size() - 1) {</span>
+<span class="fc" id="L147">                index[0]++;</span>
+<span class="fc" id="L148">                zoom[0] = 1.0;</span>
+<span class="fc" id="L149">                render.run();</span>
+            }
+<span class="fc" id="L151">        });</span>
+<span class="fc" id="L152">        zoomOut.setOnAction(event -&gt; {</span>
+<span class="fc" id="L153">            zoom[0] = clamp(zoom[0] * 0.8);</span>
+<span class="fc" id="L154">            render.run();</span>
+<span class="fc" id="L155">        });</span>
+<span class="fc" id="L156">        zoomIn.setOnAction(event -&gt; {</span>
+<span class="fc" id="L157">            zoom[0] = clamp(zoom[0] * 1.25);</span>
+<span class="fc" id="L158">            render.run();</span>
+<span class="fc" id="L159">        });</span>
+<span class="fc" id="L160">        reset.setOnAction(event -&gt; {</span>
+<span class="fc" id="L161">            zoom[0] = 1.0;</span>
+<span class="fc" id="L162">            render.run();</span>
+<span class="fc" id="L163">        });</span>
+<span class="fc" id="L164">        scroll.addEventFilter(ScrollEvent.SCROLL, event -&gt; {</span>
+<span class="fc bfc" id="L165" title="All 2 branches covered.">            if (event.getDeltaY() == 0) return;</span>
+<span class="fc bfc" id="L166" title="All 2 branches covered.">            zoom[0] = clamp(zoom[0] * (event.getDeltaY() &gt; 0 ? 1.1 : 0.9));</span>
+<span class="fc" id="L167">            render.run();</span>
+<span class="fc" id="L168">            event.consume();</span>
+<span class="fc" id="L169">        });</span>
+<span class="fc" id="L170">        dialog.getDialogPane().setOnKeyPressed(event -&gt; {</span>
+<span class="fc bfc" id="L171" title="All 2 branches covered.">            if (event.getCode() == KeyCode.LEFT) previous.fire();</span>
+<span class="fc bfc" id="L172" title="All 2 branches covered.">            else if (event.getCode() == KeyCode.RIGHT) next.fire();</span>
+<span class="fc bfc" id="L173" title="All 4 branches covered.">            else if (event.getCode() == KeyCode.EQUALS || event.getCode() == KeyCode.PLUS) zoomIn.fire();</span>
+<span class="fc bfc" id="L174" title="All 2 branches covered.">            else if (event.getCode() == KeyCode.MINUS) zoomOut.fire();</span>
+<span class="pc bpc" id="L175" title="1 of 2 branches missed.">            else if (event.getCode() == KeyCode.DIGIT0) reset.fire();</span>
+<span class="fc" id="L176">        });</span>
+
+<span class="fc" id="L178">        Region toolbarSpacer = new Region();</span>
+<span class="fc" id="L179">        HBox.setHgrow(toolbarSpacer, Priority.ALWAYS);</span>
+<span class="fc" id="L180">        HBox toolbar = new HBox(8, previous, next, toolbarSpacer, zoomOut, zoomLabel, reset, zoomIn);</span>
+<span class="fc" id="L181">        toolbar.setAlignment(Pos.CENTER_LEFT);</span>
+<span class="fc" id="L182">        toolbar.getStyleClass().add(&quot;photo-viewer-toolbar&quot;);</span>
+
+<span class="fc" id="L184">        VBox content = new VBox(12, header, scroll, toolbar);</span>
+<span class="fc" id="L185">        content.setPadding(new Insets(6));</span>
+<span class="fc" id="L186">        content.getStyleClass().add(&quot;photo-viewer&quot;);</span>
+<span class="fc" id="L187">        dialog.getDialogPane().setContent(content);</span>
+<span class="fc" id="L188">        render.run();</span>
+<span class="fc" id="L189">        dialog.showAndWait();</span>
+<span class="fc" id="L190">    }</span>
+
+    private static void applyZoom(ImageView view, StackPane canvas, double[] baseSize, double zoom) {
+<span class="fc" id="L193">        double width = baseSize[0] * zoom;</span>
+<span class="fc" id="L194">        double height = baseSize[1] * zoom;</span>
+<span class="fc" id="L195">        view.setFitWidth(width);</span>
+<span class="fc" id="L196">        view.setFitHeight(height);</span>
+<span class="fc" id="L197">        canvas.setPrefSize(Math.max(width + 48, 640), Math.max(height + 48, 420));</span>
+<span class="fc" id="L198">        canvas.setMinSize(Math.max(width + 48, 640), Math.max(height + 48, 420));</span>
+<span class="fc" id="L199">    }</span>
+
+    private static double clamp(double zoom) {
+<span class="fc" id="L202">        return Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom));</span>
+    }
+
+    /**
+     * True for buttons, text inputs, combo boxes and photo tiles.  Used by listing
+     * rows to distinguish a real row click from a click on an embedded control.
+     */
+    public static boolean isInteractiveTarget(Object target) {
+<span class="fc bfc" id="L210" title="All 2 branches covered.">        if (!(target instanceof Node start)) return false;</span>
+<span class="fc" id="L211">        Node node = start;</span>
+<span class="fc bfc" id="L212" title="All 2 branches covered.">        while (node != null) {</span>
+<span class="pc bpc" id="L213" title="1 of 8 branches missed.">            if (node instanceof ButtonBase || node instanceof Hyperlink</span>
+                    || node instanceof TextInputControl || node instanceof ComboBoxBase&lt;?&gt;) {
+<span class="fc" id="L215">                return true;</span>
+            }
+<span class="fc bfc" id="L217" title="All 2 branches covered.">            if (node.getStyleClass().contains(&quot;photo-tile&quot;)</span>
+<span class="fc bfc" id="L218" title="All 2 branches covered.">                    || node.getStyleClass().contains(&quot;photo-viewer-image&quot;)) {</span>
+<span class="fc" id="L219">                return true;</span>
+            }
+<span class="fc" id="L221">            node = node.getParent();</span>
+        }
+<span class="fc" id="L223">        return false;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

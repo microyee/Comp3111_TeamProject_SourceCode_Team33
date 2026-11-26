@@ -1,0 +1,253 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AdminReviewPane.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HKUST Marketplace</a> &gt; <a href="index.source.html" class="el_package">com.hkust.marketplace.controllers.admin</a> &gt; <span class="el_source">AdminReviewPane.java</span></div><h1>AdminReviewPane.java</h1><pre class="source lang-java linenums">package com.hkust.marketplace.controllers.admin;
+
+import com.hkust.marketplace.controllers.PhotoViewer;
+import com.hkust.marketplace.models.Listing;
+import com.hkust.marketplace.models.ListingStatus;
+import com.hkust.marketplace.models.User;
+import com.hkust.marketplace.utils.DummyDataService;
+import com.hkust.marketplace.utils.SessionManager;
+import javafx.application.Platform;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.Node;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.layout.FlowPane;
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.VBox;
+
+import java.util.List;
+import java.util.Optional;
+
+/**
+ * Task 3.2 – Listing Review &amp;amp; Approval.
+ *
+ * &lt;p&gt;Shows every submission with status PENDING_REVIEW, including seller identity,
+ * category, type, meet-up location, submitted date, status and photos.  Approving
+ * publishes the listing; rejecting requires a written reason that is stored and sent
+ * to the seller.  The listing is re-read before each decision so a concurrent change
+ * cannot be overwritten.&lt;/p&gt;
+ */
+final class AdminReviewPane extends VBox {
+
+    private final AdminDashboardController host;
+<span class="fc" id="L37">    private final DummyDataService data = DummyDataService.getInstance();</span>
+<span class="fc" id="L38">    private final Label summary = AdminUi.muted(&quot;&quot;);</span>
+<span class="fc" id="L39">    private final VBox list = new VBox(12);</span>
+
+    AdminReviewPane(AdminDashboardController host) {
+<span class="fc" id="L42">        super(12);</span>
+<span class="fc" id="L43">        this.host = host;</span>
+<span class="fc" id="L44">        setPadding(new Insets(4));</span>
+
+<span class="fc" id="L46">        Button refreshButton = new Button(&quot;Refresh&quot;);</span>
+<span class="fc" id="L47">        refreshButton.getStyleClass().addAll(&quot;btn-outline&quot;, &quot;btn-sm&quot;);</span>
+<span class="fc" id="L48">        refreshButton.setOnAction(event -&gt; refresh());</span>
+
+<span class="fc" id="L50">        HBox header = new HBox(12, summary, AdminUi.spacer(), refreshButton);</span>
+<span class="fc" id="L51">        header.setAlignment(Pos.CENTER_LEFT);</span>
+<span class="fc" id="L52">        getChildren().add(header);</span>
+
+<span class="fc" id="L54">        list.setPadding(new Insets(2));</span>
+<span class="fc" id="L55">        ScrollPane scroll = AdminUi.scroll(list);</span>
+<span class="fc" id="L56">        VBox.setVgrow(scroll, Priority.ALWAYS);</span>
+<span class="fc" id="L57">        getChildren().add(scroll);</span>
+
+<span class="fc" id="L59">        refresh();</span>
+<span class="fc" id="L60">    }</span>
+
+    private void refresh() {
+<span class="fc" id="L63">        list.getChildren().clear();</span>
+<span class="fc" id="L64">        List&lt;Listing&gt; pending = data.getPendingListings();</span>
+<span class="pc bpc" id="L65" title="1 of 2 branches missed.">        summary.setText(pending.isEmpty()</span>
+<span class="nc" id="L66">                ? &quot;No submissions waiting for review.&quot;</span>
+<span class="fc" id="L67">                : pending.size() + &quot; submission(s) waiting for review&quot;);</span>
+<span class="pc bpc" id="L68" title="1 of 2 branches missed.">        if (pending.isEmpty()) {</span>
+<span class="nc" id="L69">            list.getChildren().add(AdminUi.emptyState(&quot;Nothing to review&quot;,</span>
+                    &quot;When a seller submits a new listing it will appear here for approval.&quot;));
+<span class="nc" id="L71">            return;</span>
+        }
+<span class="fc bfc" id="L73" title="All 2 branches covered.">        for (Listing listing : pending) {</span>
+<span class="fc" id="L74">            list.getChildren().add(createCard(listing));</span>
+<span class="fc" id="L75">        }</span>
+<span class="fc" id="L76">    }</span>
+
+    private VBox createCard(Listing listing) {
+<span class="fc" id="L79">        VBox card = new VBox(12);</span>
+<span class="fc" id="L80">        card.getStyleClass().add(&quot;card&quot;);</span>
+<span class="fc" id="L81">        card.setPadding(new Insets(16));</span>
+
+<span class="fc" id="L83">        Label title = new Label(listing.getTitle());</span>
+<span class="fc" id="L84">        title.setStyle(&quot;-fx-font-size: 17px; -fx-font-weight: bold; -fx-text-fill: #1a1a2e;&quot;);</span>
+<span class="fc" id="L85">        HBox titleRow = new HBox(10, title, AdminUi.spacer(), AdminUi.statusBadge(listing.getStatus()));</span>
+<span class="fc" id="L86">        titleRow.setAlignment(Pos.CENTER_LEFT);</span>
+
+<span class="fc" id="L88">        GridPane grid = new GridPane();</span>
+<span class="fc" id="L89">        grid.setHgap(24);</span>
+<span class="fc" id="L90">        grid.setVgap(6);</span>
+<span class="fc" id="L91">        int row = 0;</span>
+<span class="fc" id="L92">        addDetail(grid, row++, &quot;Seller&quot;, listing.getSellerFullName()</span>
+<span class="fc" id="L93">                + &quot; (@&quot; + listing.getSellerUsername() + &quot;)&quot;);</span>
+<span class="fc" id="L94">        addDetail(grid, row++, &quot;Category&quot;, listing.getCategory());</span>
+<span class="fc" id="L95">        addDetail(grid, row++, &quot;Listing type&quot;, listing.getTypeDisplay());</span>
+<span class="fc" id="L96">        addDetail(grid, row++, &quot;Condition&quot;, listing.getCondition());</span>
+<span class="fc" id="L97">        addDetail(grid, row++, &quot;Meet-up location&quot;, listing.getMeetupLocation());</span>
+<span class="fc" id="L98">        addDetail(grid, row++, &quot;Price / duration&quot;, priceAndDuration(listing));</span>
+<span class="fc" id="L99">        addDetail(grid, row++, &quot;Submitted&quot;, AdminUi.formatDateTime(listing.getPostedAt()));</span>
+<span class="fc" id="L100">        addDetail(grid, row++, &quot;Status&quot;, AdminUi.statusText(listing.getStatus()));</span>
+<span class="fc bfc" id="L101" title="All 2 branches covered.">        addDetail(grid, row, &quot;Photos&quot;, listing.getPhotoPaths().isEmpty()</span>
+<span class="fc" id="L102">                ? &quot;No photos uploaded&quot; : listing.getPhotoPaths().size() + &quot; photo(s)&quot;);</span>
+
+<span class="fc" id="L104">        Label descriptionTitle = AdminUi.fieldLabel(&quot;Description&quot;);</span>
+<span class="fc bfc" id="L105" title="All 2 branches covered.">        Label description = new Label(listing.getDescription() == null</span>
+<span class="fc bfc" id="L106" title="All 2 branches covered.">                || listing.getDescription().isBlank()</span>
+<span class="fc" id="L107">                ? &quot;No description provided.&quot; : listing.getDescription());</span>
+<span class="fc" id="L108">        description.setWrapText(true);</span>
+<span class="fc" id="L109">        description.getStyleClass().add(&quot;muted&quot;);</span>
+
+<span class="fc" id="L111">        FlowPane photos = new FlowPane(8, 8);</span>
+<span class="fc bfc" id="L112" title="All 2 branches covered.">        if (listing.getPhotoPaths().isEmpty()) {</span>
+<span class="fc" id="L113">            photos.getChildren().add(AdminUi.muted(&quot;No photos uploaded.&quot;));</span>
+        } else {
+<span class="fc" id="L115">            var photoPaths = listing.getPhotoPaths();</span>
+<span class="fc bfc" id="L116" title="All 2 branches covered.">            for (int i = 0; i &lt; photoPaths.size(); i++) {</span>
+<span class="fc" id="L117">                String path = photoPaths.get(i);</span>
+<span class="fc" id="L118">                Node thumb = AdminUi.photoThumb(path, 110, 76);</span>
+<span class="fc" id="L119">                int index = i;</span>
+<span class="fc" id="L120">                thumb.setOnMouseClicked(event -&gt; {</span>
+<span class="nc" id="L121">                    PhotoViewer.show(thumb, photoPaths, index, listing.getTitle());</span>
+<span class="nc" id="L122">                    event.consume();</span>
+<span class="nc" id="L123">                });</span>
+<span class="fc" id="L124">                photos.getChildren().add(thumb);</span>
+            }
+        }
+
+<span class="fc" id="L128">        Button approve = new Button(&quot;Approve&quot;);</span>
+<span class="fc" id="L129">        approve.getStyleClass().addAll(&quot;btn-success&quot;, &quot;btn-sm&quot;);</span>
+<span class="fc" id="L130">        approve.setOnAction(event -&gt; approve(listing));</span>
+
+<span class="fc" id="L132">        Button reject = new Button(&quot;Reject&quot;);</span>
+<span class="fc" id="L133">        reject.getStyleClass().addAll(&quot;btn-danger&quot;, &quot;btn-sm&quot;);</span>
+<span class="fc" id="L134">        reject.setOnAction(event -&gt; reject(listing));</span>
+
+<span class="fc" id="L136">        HBox actions = new HBox(10, approve, reject);</span>
+<span class="fc" id="L137">        actions.setAlignment(Pos.CENTER_RIGHT);</span>
+
+<span class="fc" id="L139">        card.getChildren().addAll(titleRow, grid, descriptionTitle, description,</span>
+<span class="fc" id="L140">                AdminUi.fieldLabel(&quot;Photos&quot;), photos, actions);</span>
+<span class="fc" id="L141">        com.hkust.marketplace.controllers.UiAnimations.hoverLift(card);</span>
+<span class="fc" id="L142">        card.setOnMouseClicked(event -&gt; {</span>
+<span class="pc bpc" id="L143" title="1 of 2 branches missed.">            if (!PhotoViewer.isInteractiveTarget(event.getTarget())) {</span>
+<span class="fc" id="L144">                Platform.runLater(() -&gt; editListing(listing));</span>
+            }
+<span class="fc" id="L146">        });</span>
+<span class="fc" id="L147">        return card;</span>
+    }
+
+    private void editListing(Listing listing) {
+<span class="fc" id="L151">        Listing current = data.findListing(listing.getId());</span>
+<span class="fc bfc" id="L152" title="All 2 branches covered.">        if (current == null) {</span>
+<span class="fc" id="L153">            AdminDialogs.warn(&quot;Listing no longer available&quot;,</span>
+                    &quot;This listing was removed. The list has been refreshed.&quot;);
+<span class="fc" id="L155">            refresh();</span>
+<span class="fc" id="L156">            return;</span>
+        }
+<span class="fc" id="L158">        AdminListingFormDialog dialog = new AdminListingFormDialog(AdminUi.window(this), current, null);</span>
+<span class="fc" id="L159">        dialog.showAndWait().ifPresent(updated -&gt; {</span>
+<span class="nc" id="L160">            data.updateListing(updated);</span>
+<span class="nc" id="L161">            data.logAudit(adminUsername(), &quot;EDIT_LISTING&quot;, &quot;LISTING&quot;, updated.getId(), updated.getTitle());</span>
+<span class="nc" id="L162">            refresh();</span>
+<span class="nc" id="L163">            AdminDialogs.info(&quot;Listing updated&quot;, &quot;The listing details were saved.&quot;);</span>
+<span class="nc" id="L164">        });</span>
+<span class="fc" id="L165">    }</span>
+
+    private String priceAndDuration(Listing listing) {
+<span class="pc bpc" id="L168" title="1 of 2 branches missed.">        if (listing.getType() == null) return &quot;—&quot;;</span>
+<span class="fc bfc" id="L169" title="All 3 branches covered.">        return switch (listing.getType()) {</span>
+<span class="fc bfc" id="L170" title="All 2 branches covered.">            case SELL -&gt; listing.getPrice() == null ? &quot;Price not set&quot; : listing.getPriceDisplay();</span>
+<span class="fc bfc" id="L171" title="All 2 branches covered.">            case LEND -&gt; listing.getLendingDays() == null</span>
+<span class="fc" id="L172">                    ? &quot;Duration not set&quot; : listing.getLendingDays() + &quot; days&quot;;</span>
+<span class="fc" id="L173">            case GIVEAWAY -&gt; &quot;Free / giveaway&quot;;</span>
+        };
+    }
+
+    private void addDetail(GridPane grid, int row, String label, String value) {
+<span class="fc" id="L178">        Label key = new Label(label);</span>
+<span class="fc" id="L179">        key.setStyle(&quot;-fx-font-weight: 600; -fx-text-fill: #5a5a7a; -fx-font-size: 12px;&quot;);</span>
+<span class="pc bpc" id="L180" title="2 of 4 branches missed.">        Label val = new Label(value == null || value.isBlank() ? &quot;—&quot; : value);</span>
+<span class="fc" id="L181">        val.setWrapText(true);</span>
+<span class="fc" id="L182">        grid.add(key, 0, row);</span>
+<span class="fc" id="L183">        grid.add(val, 1, row);</span>
+<span class="fc" id="L184">    }</span>
+
+    private void approve(Listing listing) {
+<span class="fc bfc" id="L187" title="All 2 branches covered.">        if (!AdminDialogs.confirm(&quot;Approve listing?&quot;,</span>
+<span class="fc" id="L188">                &quot;Publish '&quot; + listing.getTitle() + &quot;' by @&quot; + listing.getSellerUsername()</span>
+                        + &quot; to the buyer marketplace?&quot;)) {
+<span class="fc" id="L190">            return;</span>
+        }
+<span class="fc" id="L192">        Listing current = data.findListing(listing.getId());</span>
+<span class="pc bpc" id="L193" title="1 of 4 branches missed.">        if (current == null || current.getStatus() != ListingStatus.PENDING_REVIEW) {</span>
+<span class="fc" id="L194">            AdminDialogs.warn(&quot;Listing already processed&quot;,</span>
+                    &quot;This listing is no longer pending review. The list has been refreshed.&quot;);
+<span class="fc" id="L196">            refresh();</span>
+<span class="fc" id="L197">            return;</span>
+        }
+        try {
+<span class="pc bpc" id="L200" title="1 of 2 branches missed.">            if (data.approveListing(current.getId(), adminUsername())) {</span>
+<span class="fc bfc" id="L201" title="All 2 branches covered.">                String visibility = data.catalog().isPublic(current) ? &quot; is now live.&quot;</span>
+<span class="fc" id="L202">                        : &quot; will be visible when the seller account is active.&quot;;</span>
+<span class="fc" id="L203">                AdminDialogs.info(&quot;Listing approved&quot;,</span>
+<span class="fc" id="L204">                        &quot;'&quot; + current.getTitle() + &quot;'&quot; + visibility + &quot; The seller has been notified.&quot;);</span>
+<span class="fc" id="L205">            } else {</span>
+<span class="nc" id="L206">                AdminDialogs.warn(&quot;Could not approve&quot;,</span>
+                        &quot;The listing changed while you were reviewing it. The list has been refreshed.&quot;);
+            }
+<span class="nc" id="L209">        } catch (RuntimeException ex) {</span>
+<span class="nc" id="L210">            AdminDialogs.error(&quot;Could not save the approval&quot;,</span>
+<span class="nc" id="L211">                    &quot;The listing remains Pending Review. &quot; + ex.getMessage());</span>
+<span class="fc" id="L212">        }</span>
+<span class="fc" id="L213">        refresh();</span>
+<span class="fc" id="L214">    }</span>
+
+    private void reject(Listing listing) {
+<span class="fc" id="L217">        Optional&lt;String&gt; reason = AdminDialogs.promptReason(</span>
+<span class="fc" id="L218">                &quot;Reject '&quot; + listing.getTitle() + &quot;'&quot;,</span>
+                &quot;Tell the seller why this submission cannot be published. &quot;
+                        + &quot;The reason is stored and included in the seller's notification.&quot;,
+                &quot;Rejection reason (required)&quot;);
+<span class="fc bfc" id="L222" title="All 2 branches covered.">        if (reason.isEmpty()) {</span>
+<span class="fc" id="L223">            return;</span>
+        }
+
+<span class="fc" id="L226">        Listing current = data.findListing(listing.getId());</span>
+<span class="pc bpc" id="L227" title="2 of 4 branches missed.">        if (current == null || current.getStatus() != ListingStatus.PENDING_REVIEW) {</span>
+<span class="nc" id="L228">            AdminDialogs.warn(&quot;Listing already processed&quot;,</span>
+                    &quot;This listing is no longer pending review. The list has been refreshed.&quot;);
+<span class="nc" id="L230">            refresh();</span>
+<span class="nc" id="L231">            return;</span>
+        }
+        try {
+<span class="pc bpc" id="L234" title="1 of 2 branches missed.">            if (data.rejectListing(current.getId(), reason.get(), adminUsername())) {</span>
+<span class="fc" id="L235">                AdminDialogs.info(&quot;Listing rejected&quot;,</span>
+<span class="fc" id="L236">                        &quot;The reason was saved and sent to @&quot; + current.getSellerUsername() + &quot;.&quot;);</span>
+            } else {
+<span class="nc" id="L238">                AdminDialogs.warn(&quot;Could not reject&quot;,</span>
+                        &quot;The listing changed while you were reviewing it. The list has been refreshed.&quot;);
+            }
+<span class="nc" id="L241">        } catch (RuntimeException ex) {</span>
+<span class="nc" id="L242">            AdminDialogs.error(&quot;Could not save the rejection&quot;,</span>
+<span class="nc" id="L243">                    &quot;The listing remains Pending Review. &quot; + ex.getMessage());</span>
+<span class="fc" id="L244">        }</span>
+<span class="fc" id="L245">        refresh();</span>
+<span class="fc" id="L246">    }</span>
+
+    private String adminUsername() {
+<span class="fc" id="L249">        User user = SessionManager.getCurrentUser();</span>
+<span class="pc bpc" id="L250" title="1 of 2 branches missed.">        return user == null ? DummyDataService.ADMIN_USERNAME : user.getUsername();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

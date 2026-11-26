@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SellerMarketplace.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HKUST Marketplace</a> &gt; <a href="index.source.html" class="el_package">com.hkust.marketplace.utils</a> &gt; <span class="el_source">SellerMarketplace.java</span></div><h1>SellerMarketplace.java</h1><pre class="source lang-java linenums">package com.hkust.marketplace.utils;
+
+import com.hkust.marketplace.models.*;
+
+import java.time.LocalDateTime;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Objects;
+
+import static com.hkust.marketplace.utils.MarketplaceAccounts.*;
+
+public final class SellerMarketplace {
+<span class="fc" id="L13">    public record ListingDetails(ListingType type, String title, String category, String condition,</span>
+                                 String description, String meetup, Double price, Integer lendingDays,
+                                 List&lt;String&gt; photos) {}
+
+<span class="fc" id="L17">    public record ListingStats(String id, String title, int views, long offers, long loanRequests,</span>
+                               long claims, long completedDeals) {}
+
+<span class="fc" id="L20">    public record Stats(List&lt;ListingStats&gt; listings, long offers, long loanRequests, long claims,</span>
+                        long completedSales, long returnedLoans, long completedGiveaways, long views,
+                        double averageRating, int ratingCount) {}
+
+    private final DummyDataService data;
+    private final MarketplaceAccounts accounts;
+
+<span class="fc" id="L27">    public SellerMarketplace(DummyDataService data) {</span>
+<span class="fc" id="L28">        this.data = data;</span>
+<span class="fc" id="L29">        accounts = new MarketplaceAccounts(data);</span>
+<span class="fc" id="L30">    }</span>
+
+    public Listing save(User seller, String listingId, ListingDetails details) {
+<span class="fc" id="L33">        synchronized (data) {</span>
+<span class="fc" id="L34">            accounts.requireAccount(seller, UserRole.SELLER);</span>
+<span class="fc bfc" id="L35" title="All 2 branches covered.">            Listing item = listingId == null ? new Listing() : ownedListing(seller, listingId);</span>
+<span class="fc bfc" id="L36" title="All 2 branches covered.">            if (listingId != null) require(canEdit(seller, item.getId()), &quot;This listing can no longer be edited.&quot;);</span>
+<span class="fc bfc" id="L37" title="All 4 branches covered.">            require(details != null &amp;&amp; details.type() != null, &quot;Choose a listing type.&quot;);</span>
+<span class="fc" id="L38">            String title = requiredText(details.title(), &quot;Item name&quot;, 100);</span>
+<span class="fc" id="L39">            String description = requiredText(details.description(), &quot;Description&quot;, 2000);</span>
+<span class="fc bfc" id="L40" title="All 4 branches covered.">            require(details.category() != null &amp;&amp; DummyDataService.CATEGORIES.contains(details.category()), &quot;Choose a category.&quot;);</span>
+<span class="fc bfc" id="L41" title="All 4 branches covered.">            require(details.condition() != null &amp;&amp; DummyDataService.CONDITIONS.contains(details.condition()), &quot;Choose a condition.&quot;);</span>
+<span class="fc bfc" id="L42" title="All 4 branches covered.">            require(details.meetup() != null &amp;&amp; DummyDataService.HKUST_LOCATIONS.contains(details.meetup()),</span>
+                    &quot;Choose an HKUST meet-up location.&quot;);
+<span class="fc bfc" id="L44" title="All 3 branches covered.">            switch (details.type()) {</span>
+<span class="fc bfc" id="L45" title="All 4 branches covered.">                case SELL -&gt; require(MarketplaceActivity.validPrice(details.price()) &amp;&amp; details.price() &lt;= 1_000_000,</span>
+                        &quot;Enter a price between HK$0.01 and HK$1,000,000 with up to two decimal places.&quot;);
+<span class="fc bfc" id="L47" title="All 6 branches covered.">                case LEND -&gt; require(details.lendingDays() != null &amp;&amp; details.lendingDays() &gt;= 1 &amp;&amp; details.lendingDays() &lt;= 365,</span>
+                        &quot;Enter a maximum loan duration between 1 and 365 whole days.&quot;);
+                case GIVEAWAY -&gt; { }
+            }
+<span class="fc bfc" id="L51" title="All 2 branches covered.">            var photos = new LinkedHashSet&lt;&gt;(details.photos() == null ? List.&lt;String&gt;of() : details.photos());</span>
+<span class="fc bfc" id="L52" title="All 4 branches covered.">            require(photos.size() &lt;= 6 &amp;&amp; photos.stream().noneMatch(path -&gt; clean(path).isEmpty()), &quot;Attach up to six photos.&quot;);</span>
+
+<span class="fc" id="L54">            item.setTitle(title);</span>
+<span class="fc" id="L55">            item.setDescription(description);</span>
+<span class="fc" id="L56">            item.setCategory(details.category());</span>
+<span class="fc" id="L57">            item.setCondition(details.condition());</span>
+<span class="fc" id="L58">            item.setMeetupLocation(details.meetup());</span>
+<span class="fc" id="L59">            item.setType(details.type());</span>
+<span class="fc bfc" id="L60" title="All 2 branches covered.">            item.setPrice(details.type() == ListingType.SELL ? details.price() : null);</span>
+<span class="fc bfc" id="L61" title="All 2 branches covered.">            item.setLendingDays(details.type() == ListingType.LEND ? details.lendingDays() : null);</span>
+<span class="fc" id="L62">            item.setPhotoPaths(List.copyOf(photos));</span>
+<span class="fc" id="L63">            item.setSellerUsername(seller.getUsername());</span>
+<span class="fc" id="L64">            item.setSellerFullName(seller.getFullName());</span>
+<span class="fc" id="L65">            item.setStatus(ListingStatus.PENDING_REVIEW);</span>
+<span class="fc" id="L66">            item.setReviewedAt(null);</span>
+<span class="fc" id="L67">            item.setRejectionReason(null);</span>
+<span class="fc" id="L68">            data.addListing(item);</span>
+
+<span class="fc bfc" id="L70" title="All 2 branches covered.">            String action = listingId == null ? &quot;submitted&quot; : &quot;resubmitted&quot;;</span>
+<span class="fc" id="L71">            data.addNotification(new Notification(DummyDataService.ADMIN_USERNAME, &quot;Listing &quot; + action + &quot; for review&quot;,</span>
+<span class="fc" id="L72">                    &quot;@&quot; + seller.getUsername() + &quot; &quot; + action + &quot; &quot; + title, &quot;Submission&quot;, &quot;REVIEW&quot;, item.getId()));</span>
+<span class="fc" id="L73">            data.addNotification(new Notification(seller.getUsername(), &quot;Listing pending review&quot;, title,</span>
+<span class="fc" id="L74">                    &quot;Listing&quot;, &quot;LISTINGS&quot;, item.getId()));</span>
+<span class="fc" id="L75">            return item;</span>
+        }
+    }
+
+    public boolean canEdit(User seller, String id) {
+<span class="fc" id="L80">        synchronized (data) {</span>
+<span class="fc" id="L81">            Listing listing = ownedListing(seller, id);</span>
+<span class="fc bfc" id="L82" title="All 2 branches covered.">            return switch (listing.getStatus()) {</span>
+<span class="fc" id="L83">                case LIVE, PENDING_REVIEW, REJECTED -&gt; data.getActiveRequestsForListing(id).isEmpty();</span>
+<span class="fc" id="L84">                case RESERVED, SOLD, LENT, GIVEN, REMOVED -&gt; false;</span>
+            };
+        }
+    }
+
+    public void remove(User seller, String id) {
+<span class="fc" id="L90">        synchronized (data) {</span>
+<span class="fc" id="L91">            Listing listing = ownedListing(seller, id);</span>
+<span class="fc" id="L92">            require(canEdit(seller, id), &quot;This listing can no longer be deleted.&quot;);</span>
+<span class="fc" id="L93">            listing.setStatus(ListingStatus.REMOVED);</span>
+<span class="fc" id="L94">            listing.setRemovalReason(&quot;Withdrawn by seller&quot;);</span>
+<span class="fc" id="L95">            listing.setRemovedBy(seller.getUsername());</span>
+<span class="fc" id="L96">            listing.setRemovedAt(LocalDateTime.now());</span>
+<span class="fc" id="L97">        }</span>
+<span class="fc" id="L98">    }</span>
+
+    public boolean canMarkSold(User seller, String id) {
+<span class="fc" id="L101">        synchronized (data) {</span>
+<span class="fc" id="L102">            Listing listing = ownedListing(seller, id);</span>
+<span class="fc bfc" id="L103" title="All 2 branches covered.">            return listing.getType() == ListingType.SELL</span>
+<span class="pc bpc" id="L104" title="1 of 4 branches missed.">                    &amp;&amp; (listing.getStatus() == ListingStatus.RESERVED &amp;&amp; acceptedSale(id) != null</span>
+<span class="fc bfc" id="L105" title="All 4 branches covered.">                    || listing.getStatus() == ListingStatus.LIVE &amp;&amp; data.getActiveRequestsForListing(id).isEmpty());</span>
+        }
+    }
+
+    public void markSold(User seller, String id) {
+<span class="fc" id="L110">        synchronized (data) {</span>
+<span class="fc" id="L111">            Listing listing = ownedListing(seller, id);</span>
+<span class="fc" id="L112">            require(canMarkSold(seller, id), &quot;This sale can no longer be marked sold. Resolve open offers first.&quot;);</span>
+<span class="fc" id="L113">            Deal deal = acceptedSale(id);</span>
+<span class="fc bfc" id="L114" title="All 2 branches covered.">            if (deal == null) listing.setStatus(ListingStatus.SOLD);</span>
+<span class="fc" id="L115">            else data.activity().finish(seller, deal.getId());</span>
+<span class="fc" id="L116">        }</span>
+<span class="fc" id="L117">    }</span>
+
+    private Deal acceptedSale(String id) {
+<span class="fc" id="L120">        return data.getDealsForListing(id).stream()</span>
+<span class="pc bpc" id="L121" title="2 of 4 branches missed.">                .filter(d -&gt; d.getDealType() == ListingType.SELL &amp;&amp; &quot;Accepted&quot;.equals(d.getStatus()))</span>
+<span class="fc" id="L122">                .findFirst().orElse(null);</span>
+    }
+
+    private Listing ownedListing(User seller, String id) {
+<span class="fc" id="L126">        accounts.requireAccount(seller, UserRole.SELLER);</span>
+<span class="fc" id="L127">        Listing listing = data.findListing(id);</span>
+<span class="fc bfc" id="L128" title="All 4 branches covered.">        require(listing != null &amp;&amp; seller.getUsername().equals(listing.getSellerUsername()), &quot;Listing unavailable.&quot;);</span>
+<span class="fc" id="L129">        return listing;</span>
+    }
+
+    public Stats stats(User seller) {
+<span class="fc" id="L133">        synchronized (data) {</span>
+<span class="fc" id="L134">            accounts.requireAccount(seller, UserRole.SELLER);</span>
+<span class="fc" id="L135">            String username = seller.getUsername();</span>
+<span class="fc" id="L136">            List&lt;Request&gt; requests = data.getRequestsForSeller(username);</span>
+<span class="fc" id="L137">            List&lt;Deal&gt; deals = data.getDealsForSeller(username).stream().filter(Deal::isFinished).toList();</span>
+<span class="fc" id="L138">            List&lt;Listing&gt; items = data.getListingsBySeller(username);</span>
+<span class="fc" id="L139">            List&lt;ListingStats&gt; listings = items.stream().map(l -&gt; {</span>
+<span class="fc" id="L140">                List&lt;Request&gt; itemRequests = requests.stream().filter(r -&gt; l.getId().equals(r.getListingId())).toList();</span>
+<span class="fc" id="L141">                long completed = deals.stream().filter(d -&gt; l.getId().equals(d.getListingId())).count();</span>
+<span class="fc" id="L142">                return new ListingStats(l.getId(), l.getTitle(), l.getViewCount(), count(itemRequests, ListingType.SELL),</span>
+<span class="fc" id="L143">                        count(itemRequests, ListingType.LEND), count(itemRequests, ListingType.GIVEAWAY), completed);</span>
+<span class="fc" id="L144">            }).toList();</span>
+<span class="fc" id="L145">            return new Stats(listings, count(requests, ListingType.SELL), count(requests, ListingType.LEND),</span>
+<span class="fc" id="L146">                    count(requests, ListingType.GIVEAWAY), countDeals(deals, ListingType.SELL),</span>
+<span class="fc" id="L147">                    countDeals(deals, ListingType.LEND), countDeals(deals, ListingType.GIVEAWAY),</span>
+<span class="fc" id="L148">                    items.stream().mapToLong(Listing::getViewCount).sum(),</span>
+<span class="fc" id="L149">                    data.getPublicAverageRating(username), data.getPublicRatingCount(username));</span>
+        }
+    }
+
+    private static long count(List&lt;Request&gt; requests, ListingType type) {
+<span class="fc bfc" id="L154" title="All 2 branches covered.">        return requests.stream().filter(r -&gt; r.getType() == type).count();</span>
+    }
+
+    private static long countDeals(List&lt;Deal&gt; deals, ListingType type) {
+<span class="fc bfc" id="L158" title="All 2 branches covered.">        return deals.stream().filter(d -&gt; d.getDealType() == type).count();</span>
+    }
+
+    public void reply(User seller, String id, String text) {
+<span class="fc" id="L162">        synchronized (data) {</span>
+<span class="fc" id="L163">            Rating rating = manageableRating(seller, id);</span>
+<span class="fc" id="L164">            String reply = requiredText(text, &quot;Reply&quot;, 1500);</span>
+<span class="fc bfc" id="L165" title="All 2 branches covered.">            if (Objects.equals(rating.getSellerReply(), reply)) return;</span>
+<span class="fc" id="L166">            rating.setSellerReply(reply);</span>
+<span class="fc" id="L167">            rating.setSellerReplyAt(LocalDateTime.now());</span>
+<span class="fc" id="L168">            data.updateRating(rating);</span>
+<span class="fc" id="L169">            data.addNotification(new Notification(rating.getBuyerUsername(), &quot;Seller replied to your review&quot;,</span>
+<span class="fc" id="L170">                    rating.getListingTitle() + &quot; · &quot; + reply, &quot;Rating&quot;, &quot;RATINGS&quot;, rating.getId()));</span>
+<span class="fc" id="L171">        }</span>
+<span class="fc" id="L172">    }</span>
+
+    public Report flag(User seller, String id, String reason) {
+<span class="fc" id="L175">        synchronized (data) {</span>
+<span class="fc" id="L176">            Rating rating = manageableRating(seller, id);</span>
+<span class="fc" id="L177">            return data.catalog().fileReport(seller, Report.Target.RATING, id, rating.getListingTitle(), reason);</span>
+        }
+    }
+
+    private Rating manageableRating(User seller, String id) {
+<span class="fc" id="L182">        accounts.requireAccount(seller, UserRole.SELLER);</span>
+<span class="fc" id="L183">        Rating rating = data.findRating(id);</span>
+<span class="fc bfc" id="L184" title="All 6 branches covered.">        require(rating != null &amp;&amp; seller.getUsername().equals(rating.getSellerUsername()) &amp;&amp; !rating.isHidden(),</span>
+                &quot;This review is unavailable for replies or reports.&quot;);
+<span class="fc" id="L186">        return rating;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

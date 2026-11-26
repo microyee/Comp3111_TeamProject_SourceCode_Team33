@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AdminDialogs.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HKUST Marketplace</a> &gt; <a href="index.source.html" class="el_package">com.hkust.marketplace.controllers.admin</a> &gt; <span class="el_source">AdminDialogs.java</span></div><h1>AdminDialogs.java</h1><pre class="source lang-java linenums">package com.hkust.marketplace.controllers.admin;
+
+import com.hkust.marketplace.utils.SceneManager;
+import javafx.geometry.Insets;
+import javafx.scene.Node;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
+import javafx.scene.control.ButtonBar;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.Dialog;
+import javafx.scene.control.Label;
+import javafx.scene.control.TextArea;
+import javafx.scene.layout.VBox;
+
+import java.util.Optional;
+
+/**
+ * Confirmation / information dialogs used by the admin portal.
+ *
+ * &lt;p&gt;Every destructive action goes through a confirmation dialog, and reason-based
+ * actions (reject a listing, take a listing down) cannot be submitted with a blank
+ * reason.&lt;/p&gt;
+ */
+final class AdminDialogs {
+
+    private AdminDialogs() {
+    }
+
+    static boolean confirm(String header, String message) {
+<span class="fc" id="L30">        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);</span>
+<span class="fc" id="L31">        alert.setTitle(&quot;Confirm&quot;);</span>
+<span class="fc" id="L32">        alert.setHeaderText(header);</span>
+<span class="fc" id="L33">        alert.setContentText(message);</span>
+<span class="fc" id="L34">        prepare(alert);</span>
+<span class="fc" id="L35">        return alert.showAndWait()</span>
+<span class="fc bfc" id="L36" title="All 2 branches covered.">                .filter(result -&gt; result == ButtonType.OK)</span>
+<span class="fc" id="L37">                .isPresent();</span>
+    }
+
+    static boolean confirmDestructive(String header, String message, String actionLabel) {
+<span class="fc" id="L41">        Alert alert = new Alert(Alert.AlertType.WARNING);</span>
+        // A warning alert only offers OK by default; destructive actions must also be
+        // cancellable so the user can back out without changing anything.
+<span class="fc" id="L44">        alert.getButtonTypes().setAll(ButtonType.OK, ButtonType.CANCEL);</span>
+<span class="fc" id="L45">        alert.setTitle(&quot;Confirm destructive action&quot;);</span>
+<span class="fc" id="L46">        alert.setHeaderText(header);</span>
+<span class="fc" id="L47">        alert.setContentText(message);</span>
+<span class="fc" id="L48">        prepare(alert);</span>
+<span class="fc" id="L49">        Node okButton = alert.getDialogPane().lookupButton(ButtonType.OK);</span>
+<span class="pc bpc" id="L50" title="1 of 2 branches missed.">        if (okButton instanceof Button button) {</span>
+<span class="fc bfc" id="L51" title="All 2 branches covered.">            button.setText(actionLabel == null ? &quot;Confirm&quot; : actionLabel);</span>
+        }
+<span class="fc" id="L53">        return alert.showAndWait()</span>
+<span class="fc bfc" id="L54" title="All 2 branches covered.">                .filter(result -&gt; result == ButtonType.OK)</span>
+<span class="fc" id="L55">                .isPresent();</span>
+    }
+
+    static void info(String header, String message) {
+<span class="fc" id="L59">        show(Alert.AlertType.INFORMATION, &quot;Information&quot;, header, message);</span>
+<span class="fc" id="L60">    }</span>
+
+    static void warn(String header, String message) {
+<span class="fc" id="L63">        show(Alert.AlertType.WARNING, &quot;Warning&quot;, header, message);</span>
+<span class="fc" id="L64">    }</span>
+
+    static void error(String header, String message) {
+<span class="fc" id="L67">        show(Alert.AlertType.ERROR, &quot;Error&quot;, header, message);</span>
+<span class="fc" id="L68">    }</span>
+
+    private static void show(Alert.AlertType type, String title, String header, String message) {
+<span class="fc" id="L71">        Alert alert = new Alert(type);</span>
+<span class="fc" id="L72">        alert.setTitle(title);</span>
+<span class="fc" id="L73">        alert.setHeaderText(header);</span>
+<span class="fc" id="L74">        alert.setContentText(message);</span>
+<span class="fc" id="L75">        prepare(alert);</span>
+<span class="fc" id="L76">        alert.showAndWait();</span>
+<span class="fc" id="L77">    }</span>
+
+    /** Keeps long warning messages readable instead of widening the alert off-screen. */
+    private static void prepare(Alert alert) {
+<span class="fc" id="L81">        javafx.stage.Stage owner = SceneManager.getPrimaryStage();</span>
+<span class="pc bpc" id="L82" title="2 of 6 branches missed.">        if (owner != null &amp;&amp; owner.isShowing() &amp;&amp; owner.getScene() != null) {</span>
+<span class="fc" id="L83">            alert.initOwner(owner);</span>
+        }
+<span class="fc" id="L85">        alert.getDialogPane().setPrefWidth(520);</span>
+<span class="fc" id="L86">        Node content = alert.getDialogPane().lookup(&quot;.content.label&quot;);</span>
+<span class="pc bpc" id="L87" title="1 of 2 branches missed.">        if (content instanceof Label label) {</span>
+<span class="fc" id="L88">            label.setWrapText(true);</span>
+        }
+<span class="fc" id="L90">    }</span>
+
+    /**
+     * Prompts for a non-empty reason.  The submit button stays disabled until the text
+     * area contains a non-blank value, implementing the &quot;reason is mandatory&quot; rule.
+     */
+    static Optional&lt;String&gt; promptReason(String header, String message, String prompt) {
+<span class="fc" id="L97">        Dialog&lt;String&gt; dialog = new Dialog&lt;&gt;();</span>
+<span class="fc" id="L98">        dialog.setTitle(&quot;Reason Required&quot;);</span>
+<span class="fc" id="L99">        dialog.setHeaderText(header);</span>
+<span class="fc" id="L100">        javafx.stage.Stage owner = SceneManager.getPrimaryStage();</span>
+<span class="pc bpc" id="L101" title="4 of 6 branches missed.">        if (owner != null &amp;&amp; owner.isShowing() &amp;&amp; owner.getScene() != null) {</span>
+<span class="nc" id="L102">            dialog.initOwner(owner);</span>
+        }
+
+<span class="fc" id="L105">        ButtonType submit = new ButtonType(&quot;Submit&quot;, ButtonBar.ButtonData.OK_DONE);</span>
+<span class="fc" id="L106">        ButtonType cancel = new ButtonType(&quot;Cancel&quot;, ButtonBar.ButtonData.CANCEL_CLOSE);</span>
+<span class="fc" id="L107">        dialog.getDialogPane().getButtonTypes().addAll(submit, cancel);</span>
+
+<span class="fc" id="L109">        Label description = new Label(message);</span>
+<span class="fc" id="L110">        description.setWrapText(true);</span>
+<span class="fc" id="L111">        TextArea area = new TextArea();</span>
+<span class="fc" id="L112">        area.setPromptText(prompt);</span>
+<span class="fc" id="L113">        area.setPrefRowCount(4);</span>
+<span class="fc" id="L114">        area.setWrapText(true);</span>
+<span class="fc" id="L115">        Label hint = AdminUi.hint(&quot;A written reason is required.&quot;);</span>
+
+<span class="fc" id="L117">        VBox content = new VBox(10, description, area, hint);</span>
+<span class="fc" id="L118">        content.setPadding(new Insets(8));</span>
+<span class="fc" id="L119">        content.setPrefWidth(460);</span>
+<span class="fc" id="L120">        dialog.getDialogPane().setContent(content);</span>
+
+<span class="fc" id="L122">        Node submitButton = dialog.getDialogPane().lookupButton(submit);</span>
+<span class="fc" id="L123">        submitButton.setDisable(true);</span>
+<span class="fc" id="L124">        area.textProperty().addListener((observable, oldValue, newValue) -&gt;</span>
+<span class="pc bpc" id="L125" title="1 of 4 branches missed.">                submitButton.setDisable(newValue == null || newValue.isBlank()));</span>
+
+<span class="fc bfc" id="L127" title="All 2 branches covered.">        dialog.setResultConverter(button -&gt; button == submit ? area.getText().trim() : null);</span>
+<span class="pc bpc" id="L128" title="2 of 4 branches missed.">        return dialog.showAndWait().filter(value -&gt; value != null &amp;&amp; !value.isBlank());</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

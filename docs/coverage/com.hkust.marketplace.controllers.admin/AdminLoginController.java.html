@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AdminLoginController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HKUST Marketplace</a> &gt; <a href="index.source.html" class="el_package">com.hkust.marketplace.controllers.admin</a> &gt; <span class="el_source">AdminLoginController.java</span></div><h1>AdminLoginController.java</h1><pre class="source lang-java linenums">package com.hkust.marketplace.controllers.admin;
+
+import com.hkust.marketplace.models.Notification;
+import com.hkust.marketplace.models.User;
+import com.hkust.marketplace.models.UserRole;
+import com.hkust.marketplace.utils.DummyDataService;
+import com.hkust.marketplace.utils.PasswordUtils;
+import com.hkust.marketplace.utils.SceneManager;
+import com.hkust.marketplace.utils.SessionManager;
+import javafx.beans.binding.Bindings;
+import javafx.fxml.FXML;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.PasswordField;
+import javafx.scene.control.TextField;
+
+/**
+ * Task 3.1 – Admin Login.
+ *
+ * &lt;p&gt;Only the seeded administrator account can use this screen.  A valid buyer or
+ * seller credential is explicitly rejected with a &quot;wrong account type&quot; message, and
+ * empty fields keep the submit button disabled.&lt;/p&gt;
+ */
+<span class="fc" id="L24">public class AdminLoginController {</span>
+
+    @FXML private TextField usernameField;
+    @FXML private PasswordField passwordField;
+    @FXML private Label errorLabel;
+    @FXML private Label requiredHint;
+    @FXML private Button loginButton;
+
+    @FXML
+    public void initialize() {
+<span class="pc bpc" id="L34" title="1 of 2 branches missed.">        if (loginButton != null) {</span>
+<span class="fc" id="L35">            var fieldsEmpty = Bindings.createBooleanBinding(</span>
+<span class="fc bfc" id="L36" title="All 2 branches covered.">                    () -&gt; usernameField.getText().trim().isEmpty()</span>
+<span class="fc bfc" id="L37" title="All 2 branches covered.">                            || passwordField.getText().isEmpty(),</span>
+<span class="fc" id="L38">                    usernameField.textProperty(), passwordField.textProperty());</span>
+<span class="fc" id="L39">            loginButton.disableProperty().bind(fieldsEmpty);</span>
+<span class="fc" id="L40">            loginButton.setDefaultButton(true);</span>
+<span class="pc bpc" id="L41" title="1 of 2 branches missed.">            if (requiredHint != null) {</span>
+<span class="fc" id="L42">                requiredHint.visibleProperty().bind(fieldsEmpty);</span>
+<span class="fc" id="L43">                requiredHint.managedProperty().bind(fieldsEmpty);</span>
+            }
+        }
+<span class="pc bpc" id="L46" title="1 of 2 branches missed.">        if (usernameField != null) {</span>
+<span class="fc" id="L47">            usernameField.setOnAction(event -&gt; passwordField.requestFocus());</span>
+        }
+<span class="pc bpc" id="L49" title="1 of 2 branches missed.">        if (passwordField != null) {</span>
+<span class="fc" id="L50">            passwordField.setOnAction(event -&gt; {</span>
+<span class="pc bpc" id="L51" title="2 of 4 branches missed.">                if (loginButton == null || !loginButton.isDisabled()) {</span>
+<span class="fc" id="L52">                    handleLogin();</span>
+                }
+<span class="fc" id="L54">            });</span>
+        }
+<span class="fc" id="L56">    }</span>
+
+    @FXML
+    private void handleLogin() {
+<span class="fc" id="L60">        hideError();</span>
+
+<span class="pc bpc" id="L62" title="1 of 2 branches missed.">        String username = usernameField.getText() == null ? &quot;&quot; : usernameField.getText().trim();</span>
+<span class="pc bpc" id="L63" title="1 of 2 branches missed.">        String password = passwordField.getText() == null ? &quot;&quot; : passwordField.getText();</span>
+
+<span class="pc bpc" id="L65" title="1 of 4 branches missed.">        if (username.isEmpty() || password.isEmpty()) {</span>
+<span class="fc" id="L66">            showError(&quot;Both username and password are required.&quot;);</span>
+<span class="fc" id="L67">            return;</span>
+        }
+
+<span class="fc" id="L70">        DummyDataService data = DummyDataService.getInstance();</span>
+<span class="fc" id="L71">        User user = data.findUser(username);</span>
+
+<span class="fc bfc" id="L73" title="All 2 branches covered.">        if (user == null) {</span>
+<span class="fc" id="L74">            showError(&quot;No account found with that username.&quot;);</span>
+<span class="fc" id="L75">            return;</span>
+        }
+<span class="fc bfc" id="L77" title="All 2 branches covered.">        if (!PasswordUtils.verify(password, user.getPasswordHash())) {</span>
+<span class="fc" id="L78">            showError(&quot;Incorrect password. Please try again.&quot;);</span>
+<span class="fc" id="L79">            return;</span>
+        }
+<span class="fc bfc" id="L81" title="All 2 branches covered.">        if (user.getRole() != UserRole.ADMIN) {</span>
+<span class="fc" id="L82">            showError(&quot;This account is not an Administrator account. &quot;</span>
+                    + &quot;Please use the Buyer or Seller portal.&quot;);
+<span class="fc" id="L84">            return;</span>
+        }
+<span class="fc bfc" id="L86" title="All 4 branches covered.">        if (user.isDeleted() || !user.isActive()) {</span>
+<span class="fc" id="L87">            showError(&quot;This administrator account is not active.&quot;);</span>
+<span class="fc" id="L88">            return;</span>
+        }
+
+<span class="fc" id="L91">        SessionManager.login(user);</span>
+<span class="fc" id="L92">        data.logAudit(user.getUsername(), &quot;LOGIN&quot;, &quot;USER&quot;, user.getUsername(),</span>
+                &quot;Signed in to the Admin Portal&quot;);
+<span class="fc" id="L94">        data.addNotification(new Notification(user.getUsername(), &quot;Admin Signed In&quot;,</span>
+                &quot;You signed in to the Admin Portal.&quot;, &quot;Account&quot;));
+<span class="fc" id="L96">        SceneManager.showAdminDashboard();</span>
+<span class="fc" id="L97">    }</span>
+
+    private void showError(String message) {
+<span class="fc" id="L100">        errorLabel.setText(message);</span>
+<span class="fc" id="L101">        errorLabel.setVisible(true);</span>
+<span class="fc" id="L102">        errorLabel.setManaged(true);</span>
+<span class="fc" id="L103">    }</span>
+
+    private void hideError() {
+<span class="fc" id="L106">        errorLabel.setText(&quot;&quot;);</span>
+<span class="fc" id="L107">        errorLabel.setVisible(false);</span>
+<span class="fc" id="L108">        errorLabel.setManaged(false);</span>
+<span class="fc" id="L109">    }</span>
+
+    @FXML
+    private void goWelcome() {
+<span class="fc" id="L113">        SceneManager.showWelcome();</span>
+<span class="fc" id="L114">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

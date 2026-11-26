@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Listing.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HKUST Marketplace</a> &gt; <a href="index.source.html" class="el_package">com.hkust.marketplace.models</a> &gt; <span class="el_source">Listing.java</span></div><h1>Listing.java</h1><pre class="source lang-java linenums">package com.hkust.marketplace.models;
+
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * In-memory listing model.
+ * TODO: Persist to database and add photo storage when backend is ready.
+ */
+public class Listing {
+    private String id;
+    private String title;
+    private String description;
+    private String category;
+    private ListingType type;
+    private ListingStatus status;
+    private String condition;          // New / Like New / Used / For Parts
+    private Double price;              // Only for SELL
+    private Integer lendingDays;       // Only for LEND
+    private String meetupLocation;
+    private String sellerUsername;
+    private String sellerFullName;
+    private LocalDateTime postedAt;
+    private LocalDateTime reviewedAt;
+    private String rejectionReason;
+    private int viewCount;
+
+    // Set when an admin takes a listing down (status REMOVED).
+    private String removalReason;
+    private LocalDateTime removedAt;
+    private String removedBy;
+
+<span class="fc" id="L34">    private List&lt;String&gt; photoPaths = new ArrayList&lt;&gt;(); // Demo: placeholder paths</span>
+
+<span class="fc" id="L36">    public Listing() {</span>
+<span class="fc" id="L37">        this.postedAt = LocalDateTime.now();</span>
+<span class="fc" id="L38">        this.status = ListingStatus.PENDING_REVIEW;</span>
+<span class="fc" id="L39">        this.viewCount = 0;</span>
+<span class="fc" id="L40">    }</span>
+
+    // Getters &amp; Setters
+<span class="fc" id="L43">    public String getId() { return id; }</span>
+<span class="fc" id="L44">    public void setId(String id) { this.id = id; }</span>
+
+<span class="fc" id="L46">    public String getTitle() { return title; }</span>
+<span class="fc" id="L47">    public void setTitle(String title) { this.title = title; }</span>
+
+<span class="fc" id="L49">    public String getDescription() { return description; }</span>
+<span class="fc" id="L50">    public void setDescription(String description) { this.description = description; }</span>
+
+<span class="fc" id="L52">    public String getCategory() { return category; }</span>
+<span class="fc" id="L53">    public void setCategory(String category) { this.category = category; }</span>
+
+<span class="fc" id="L55">    public ListingType getType() { return type; }</span>
+<span class="fc" id="L56">    public void setType(ListingType type) { this.type = type; }</span>
+
+<span class="fc" id="L58">    public ListingStatus getStatus() { return status; }</span>
+<span class="fc" id="L59">    public void setStatus(ListingStatus status) { this.status = status; }</span>
+
+<span class="fc" id="L61">    public String getCondition() { return condition; }</span>
+<span class="fc" id="L62">    public void setCondition(String condition) { this.condition = condition; }</span>
+
+<span class="fc" id="L64">    public Double getPrice() { return price; }</span>
+<span class="fc" id="L65">    public void setPrice(Double price) { this.price = price; }</span>
+
+<span class="fc" id="L67">    public Integer getLendingDays() { return lendingDays; }</span>
+<span class="fc" id="L68">    public void setLendingDays(Integer lendingDays) { this.lendingDays = lendingDays; }</span>
+
+<span class="fc" id="L70">    public String getMeetupLocation() { return meetupLocation; }</span>
+<span class="fc" id="L71">    public void setMeetupLocation(String meetupLocation) { this.meetupLocation = meetupLocation; }</span>
+
+<span class="fc" id="L73">    public String getSellerUsername() { return sellerUsername; }</span>
+<span class="fc" id="L74">    public void setSellerUsername(String sellerUsername) { this.sellerUsername = sellerUsername; }</span>
+
+<span class="fc" id="L76">    public String getSellerFullName() { return sellerFullName; }</span>
+<span class="fc" id="L77">    public void setSellerFullName(String sellerFullName) { this.sellerFullName = sellerFullName; }</span>
+
+<span class="fc" id="L79">    public LocalDateTime getPostedAt() { return postedAt; }</span>
+<span class="fc" id="L80">    public void setPostedAt(LocalDateTime postedAt) { this.postedAt = postedAt; }</span>
+
+<span class="fc" id="L82">    public LocalDateTime getReviewedAt() { return reviewedAt; }</span>
+<span class="fc" id="L83">    public void setReviewedAt(LocalDateTime reviewedAt) { this.reviewedAt = reviewedAt; }</span>
+
+<span class="fc" id="L85">    public String getRejectionReason() { return rejectionReason; }</span>
+<span class="fc" id="L86">    public void setRejectionReason(String rejectionReason) { this.rejectionReason = rejectionReason; }</span>
+
+<span class="fc" id="L88">    public int getViewCount() { return viewCount; }</span>
+<span class="fc" id="L89">    public void setViewCount(int viewCount) { this.viewCount = viewCount; }</span>
+
+<span class="fc" id="L91">    public String getRemovalReason() { return removalReason; }</span>
+<span class="fc" id="L92">    public void setRemovalReason(String removalReason) { this.removalReason = removalReason; }</span>
+
+<span class="nc" id="L94">    public LocalDateTime getRemovedAt() { return removedAt; }</span>
+<span class="fc" id="L95">    public void setRemovedAt(LocalDateTime removedAt) { this.removedAt = removedAt; }</span>
+
+<span class="fc" id="L97">    public String getRemovedBy() { return removedBy; }</span>
+<span class="fc" id="L98">    public void setRemovedBy(String removedBy) { this.removedBy = removedBy; }</span>
+
+<span class="fc" id="L100">    public List&lt;String&gt; getPhotoPaths() { return photoPaths; }</span>
+<span class="fc" id="L101">    public void setPhotoPaths(List&lt;String&gt; photoPaths) { this.photoPaths = photoPaths; }</span>
+
+    public String getPriceDisplay() {
+<span class="pc bpc" id="L104" title="1 of 4 branches missed.">        if (type == ListingType.SELL &amp;&amp; price != null) {</span>
+<span class="fc" id="L105">            return &quot;HK$ &quot; + java.math.BigDecimal.valueOf(price).stripTrailingZeros().toPlainString();</span>
+<span class="fc bfc" id="L106" title="All 2 branches covered.">        } else if (type == ListingType.LEND) {</span>
+<span class="fc" id="L107">            return &quot;Borrow&quot;;</span>
+        } else {
+<span class="fc" id="L109">            return &quot;Free&quot;;</span>
+        }
+    }
+
+    public String getTypeDisplay() {
+<span class="fc" id="L114">        return type.toString();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

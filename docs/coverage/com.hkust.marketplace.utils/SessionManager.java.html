@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SessionManager.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HKUST Marketplace</a> &gt; <a href="index.source.html" class="el_package">com.hkust.marketplace.utils</a> &gt; <span class="el_source">SessionManager.java</span></div><h1>SessionManager.java</h1><pre class="source lang-java linenums">package com.hkust.marketplace.utils;
+
+import com.hkust.marketplace.models.User;
+
+/**
+ * Simple session holder for the currently logged-in user.
+ * TODO: Replace with proper JWT / session token handling when backend is added.
+ */
+<span class="nc" id="L9">public class SessionManager {</span>
+    private static User currentUser;
+
+    public static void login(User user) {
+<span class="fc" id="L13">        currentUser = user;</span>
+<span class="fc" id="L14">    }</span>
+
+    public static void logout() {
+<span class="fc" id="L17">        currentUser = null;</span>
+<span class="fc" id="L18">    }</span>
+
+    /**
+     * Ends the current session when it belongs to the given account.  Used when an
+     * administrator deactivates or deletes an account: that user must not keep a
+     * usable session.  (The demo only has one live session, so this is a no-op for
+     * other accounts.)
+     */
+    public static void logoutIf(String username) {
+<span class="pc bpc" id="L27" title="1 of 4 branches missed.">        if (currentUser != null &amp;&amp; username != null</span>
+<span class="fc bfc" id="L28" title="All 2 branches covered.">                &amp;&amp; currentUser.getUsername().equalsIgnoreCase(username)) {</span>
+<span class="fc" id="L29">            currentUser = null;</span>
+        }
+<span class="fc" id="L31">    }</span>
+
+    /** True when the current user still exists and has not been deactivated/deleted. */
+    public static boolean isSessionValid() {
+<span class="pc bpc" id="L35" title="2 of 6 branches missed.">        return currentUser != null &amp;&amp; currentUser.isActive() &amp;&amp; !currentUser.isDeleted();</span>
+    }
+
+    public static User getCurrentUser() {
+<span class="fc" id="L39">        return currentUser;</span>
+    }
+
+    public static boolean isLoggedIn() {
+<span class="nc bnc" id="L43" title="All 2 branches missed.">        return currentUser != null;</span>
+    }
+
+    public static boolean isBuyer() {
+<span class="pc bpc" id="L47" title="2 of 4 branches missed.">        return currentUser != null &amp;&amp; currentUser.getRole() == com.hkust.marketplace.models.UserRole.BUYER;</span>
+    }
+
+    public static boolean isSeller() {
+<span class="pc bpc" id="L51" title="2 of 4 branches missed.">        return currentUser != null &amp;&amp; currentUser.getRole() == com.hkust.marketplace.models.UserRole.SELLER;</span>
+    }
+
+    public static boolean isAdmin() {
+<span class="fc bfc" id="L55" title="All 4 branches covered.">        return currentUser != null &amp;&amp; currentUser.getRole() == com.hkust.marketplace.models.UserRole.ADMIN;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

@@ -1,0 +1,248 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AdminRatingsPane.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HKUST Marketplace</a> &gt; <a href="index.source.html" class="el_package">com.hkust.marketplace.controllers.admin</a> &gt; <span class="el_source">AdminRatingsPane.java</span></div><h1>AdminRatingsPane.java</h1><pre class="source lang-java linenums">package com.hkust.marketplace.controllers.admin;
+
+import com.hkust.marketplace.models.Rating;
+import com.hkust.marketplace.models.User;
+import com.hkust.marketplace.utils.DummyDataService;
+import com.hkust.marketplace.utils.SessionManager;
+import javafx.collections.FXCollections;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.DatePicker;
+import javafx.scene.control.Label;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.control.TextField;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.VBox;
+
+import java.time.LocalDate;
+import java.util.Comparator;
+import java.util.List;
+import java.util.stream.Collectors;
+
+/**
+ * Task 3.8 – Seller Ratings Overview.
+ *
+ * &lt;p&gt;Lists every rating (including hidden ones) with seller/buyer, score, comment,
+ * date and visibility.  Filters cover user, score and date range.  Hiding a review
+ * removes it from the public seller average; unhiding restores it.&lt;/p&gt;
+ */
+final class AdminRatingsPane extends VBox {
+
+<span class="fc" id="L34">    private final DummyDataService data = DummyDataService.getInstance();</span>
+
+<span class="fc" id="L36">    private final TextField searchField = new TextField();</span>
+<span class="fc" id="L37">    private final ComboBox&lt;String&gt; ratingFilter = new ComboBox&lt;&gt;();</span>
+<span class="fc" id="L38">    private final ComboBox&lt;String&gt; visibilityFilter = new ComboBox&lt;&gt;(</span>
+<span class="fc" id="L39">            FXCollections.observableArrayList(&quot;All reviews&quot;, &quot;Visible only&quot;, &quot;Hidden only&quot;));</span>
+<span class="fc" id="L40">    private final DatePicker fromDate = new DatePicker();</span>
+<span class="fc" id="L41">    private final DatePicker toDate = new DatePicker();</span>
+<span class="fc" id="L42">    private final Label summary = AdminUi.muted(&quot;&quot;);</span>
+<span class="fc" id="L43">    private final Label errorLabel = AdminUi.errorLabel();</span>
+<span class="fc" id="L44">    private final VBox list = new VBox(10);</span>
+
+    AdminRatingsPane(AdminDashboardController host, String initialSearch) {
+<span class="fc" id="L47">        super(10);</span>
+<span class="fc" id="L48">        setPadding(new Insets(4));</span>
+
+<span class="fc" id="L50">        searchField.setPromptText(&quot;Search seller, buyer or listing...&quot;);</span>
+<span class="fc" id="L51">        searchField.setPrefWidth(220);</span>
+<span class="fc bfc" id="L52" title="All 2 branches covered.">        if (initialSearch != null) {</span>
+<span class="fc" id="L53">            searchField.setText(initialSearch);</span>
+        }
+
+<span class="fc" id="L56">        ratingFilter.getItems().add(&quot;All ratings&quot;);</span>
+<span class="fc bfc" id="L57" title="All 2 branches covered.">        for (int score = 5; score &gt;= 1; score--) {</span>
+<span class="fc" id="L58">            ratingFilter.getItems().add(score + &quot; stars&quot;);</span>
+        }
+<span class="fc" id="L60">        ratingFilter.getSelectionModel().selectFirst();</span>
+<span class="fc" id="L61">        visibilityFilter.getSelectionModel().selectFirst();</span>
+
+<span class="fc" id="L63">        fromDate.setPromptText(&quot;From&quot;);</span>
+<span class="fc" id="L64">        fromDate.setPrefWidth(120);</span>
+<span class="fc" id="L65">        toDate.setPromptText(&quot;To&quot;);</span>
+<span class="fc" id="L66">        toDate.setPrefWidth(120);</span>
+
+<span class="fc" id="L68">        Button clear = new Button(&quot;Clear&quot;);</span>
+<span class="fc" id="L69">        clear.getStyleClass().addAll(&quot;btn-outline&quot;, &quot;btn-sm&quot;);</span>
+<span class="fc" id="L70">        clear.setOnAction(event -&gt; {</span>
+<span class="fc" id="L71">            searchField.clear();</span>
+<span class="fc" id="L72">            ratingFilter.getSelectionModel().selectFirst();</span>
+<span class="fc" id="L73">            visibilityFilter.getSelectionModel().selectFirst();</span>
+<span class="fc" id="L74">            fromDate.setValue(null);</span>
+<span class="fc" id="L75">            toDate.setValue(null);</span>
+<span class="fc" id="L76">            refresh();</span>
+<span class="fc" id="L77">        });</span>
+
+<span class="fc" id="L79">        HBox toolbar = AdminUi.toolbar(searchField, ratingFilter, visibilityFilter,</span>
+                fromDate, toDate, clear);
+<span class="fc" id="L81">        getChildren().addAll(toolbar, summary, errorLabel);</span>
+
+<span class="fc" id="L83">        list.setPadding(new Insets(2));</span>
+<span class="fc" id="L84">        ScrollPane scroll = AdminUi.scroll(list);</span>
+<span class="fc" id="L85">        VBox.setVgrow(scroll, Priority.ALWAYS);</span>
+<span class="fc" id="L86">        getChildren().add(scroll);</span>
+
+<span class="fc" id="L88">        searchField.textProperty().addListener((observable, oldValue, newValue) -&gt; refresh());</span>
+<span class="fc" id="L89">        ratingFilter.valueProperty().addListener((observable, oldValue, newValue) -&gt; refresh());</span>
+<span class="fc" id="L90">        visibilityFilter.valueProperty().addListener((observable, oldValue, newValue) -&gt; refresh());</span>
+<span class="fc" id="L91">        fromDate.valueProperty().addListener((observable, oldValue, newValue) -&gt; refresh());</span>
+<span class="fc" id="L92">        toDate.valueProperty().addListener((observable, oldValue, newValue) -&gt; refresh());</span>
+
+<span class="fc" id="L94">        refresh();</span>
+<span class="fc" id="L95">    }</span>
+
+    private void refresh() {
+<span class="fc" id="L98">        LocalDate from = fromDate.getValue();</span>
+<span class="fc" id="L99">        LocalDate to = toDate.getValue();</span>
+<span class="fc bfc" id="L100" title="All 6 branches covered.">        if (from != null &amp;&amp; to != null &amp;&amp; from.isAfter(to)) {</span>
+<span class="fc" id="L101">            AdminUi.setMessage(errorLabel,</span>
+                    &quot;Invalid date range: the start date must be on or before the end date.&quot;, true);
+<span class="fc" id="L103">            return;</span>
+        }
+<span class="fc" id="L105">        AdminUi.clear(errorLabel);</span>
+
+<span class="pc bpc" id="L107" title="1 of 2 branches missed.">        String query = searchField.getText() == null ? &quot;&quot; : searchField.getText().trim().toLowerCase();</span>
+<span class="fc" id="L108">        String ratingValue = ratingFilter.getValue();</span>
+<span class="fc" id="L109">        String visibility = visibilityFilter.getValue();</span>
+
+<span class="fc" id="L111">        List&lt;Rating&gt; filtered = data.getAllRatings().stream()</span>
+<span class="fc" id="L112">                .filter(review -&gt; matchesQuery(review, query))</span>
+<span class="pc bpc" id="L113" title="1 of 4 branches missed.">                .filter(review -&gt; ratingValue == null || &quot;All ratings&quot;.equals(ratingValue)</span>
+<span class="fc bfc" id="L114" title="All 2 branches covered.">                        || ratingValue.startsWith(String.valueOf(review.getRating())))</span>
+<span class="fc" id="L115">                .filter(review -&gt; {</span>
+<span class="fc bfc" id="L116" title="All 4 branches covered.">                    if (&quot;Visible only&quot;.equals(visibility)) return !review.isHidden();</span>
+<span class="fc bfc" id="L117" title="All 2 branches covered.">                    if (&quot;Hidden only&quot;.equals(visibility)) return review.isHidden();</span>
+<span class="fc" id="L118">                    return true;</span>
+                })
+<span class="fc" id="L120">                .filter(review -&gt; {</span>
+<span class="fc bfc" id="L121" title="All 2 branches covered.">                    LocalDate date = review.getCreatedAt() == null</span>
+<span class="fc" id="L122">                            ? null : review.getCreatedAt().toLocalDate();</span>
+<span class="fc bfc" id="L123" title="All 6 branches covered.">                    if (date == null) return from == null &amp;&amp; to == null;</span>
+<span class="fc bfc" id="L124" title="All 4 branches covered.">                    if (from != null &amp;&amp; date.isBefore(from)) return false;</span>
+<span class="pc bpc" id="L125" title="1 of 4 branches missed.">                    if (to != null &amp;&amp; date.isAfter(to)) return false;</span>
+<span class="fc" id="L126">                    return true;</span>
+                })
+<span class="fc" id="L128">                .sorted(Comparator.comparing(Rating::getCreatedAt,</span>
+<span class="fc" id="L129">                        Comparator.nullsLast(Comparator.naturalOrder())).reversed())</span>
+<span class="fc" id="L130">                .collect(Collectors.toList());</span>
+
+<span class="fc" id="L132">        list.getChildren().clear();</span>
+<span class="fc" id="L133">        summary.setText(filtered.size() + &quot; rating(s) shown&quot;</span>
+                + &quot; · hidden ratings are excluded from public averages&quot;);
+<span class="fc bfc" id="L135" title="All 2 branches covered.">        if (filtered.isEmpty()) {</span>
+<span class="fc" id="L136">            list.getChildren().add(AdminUi.emptyState(&quot;No matching ratings&quot;,</span>
+                    &quot;Clear the filters to see all buyer ratings.&quot;));
+<span class="fc" id="L138">            return;</span>
+        }
+<span class="fc bfc" id="L140" title="All 2 branches covered.">        for (Rating review : filtered) {</span>
+<span class="fc" id="L141">            list.getChildren().add(createCard(review));</span>
+<span class="fc" id="L142">        }</span>
+<span class="fc" id="L143">    }</span>
+
+    private boolean matchesQuery(Rating review, String query) {
+<span class="fc bfc" id="L146" title="All 2 branches covered.">        if (query.equalsIgnoreCase(review.getId())) return true;</span>
+<span class="fc bfc" id="L147" title="All 2 branches covered.">        if (query.isEmpty()) return true;</span>
+<span class="fc bfc" id="L148" title="All 2 branches covered.">        return contains(review.getSellerUsername(), query)</span>
+<span class="fc bfc" id="L149" title="All 2 branches covered.">                || contains(review.getBuyerUsername(), query)</span>
+<span class="fc bfc" id="L150" title="All 2 branches covered.">                || contains(review.getListingTitle(), query)</span>
+<span class="fc bfc" id="L151" title="All 2 branches covered.">                || contains(review.getComment(), query);</span>
+    }
+
+    private boolean contains(String value, String query) {
+<span class="fc bfc" id="L155" title="All 4 branches covered.">        return value != null &amp;&amp; value.toLowerCase().contains(query);</span>
+    }
+
+    private VBox createCard(Rating review) {
+<span class="fc" id="L159">        VBox card = new VBox(7);</span>
+<span class="fc" id="L160">        card.getStyleClass().add(&quot;card&quot;);</span>
+<span class="fc bfc" id="L161" title="All 2 branches covered.">        if (review.isHidden()) {</span>
+<span class="fc" id="L162">            card.getStyleClass().add(&quot;hidden-review&quot;);</span>
+        }
+<span class="fc" id="L164">        card.setPadding(new Insets(14));</span>
+
+<span class="fc" id="L166">        Label stars = new Label(&quot;★&quot;.repeat(review.getRating())</span>
+<span class="fc" id="L167">                + &quot;☆&quot;.repeat(5 - review.getRating()));</span>
+<span class="fc" id="L168">        stars.setStyle(&quot;-fx-text-fill: #A68137; -fx-font-size: 17px;&quot;);</span>
+
+<span class="fc" id="L170">        HBox top = new HBox(10, stars, AdminUi.spacer());</span>
+<span class="fc" id="L171">        top.setAlignment(Pos.CENTER_LEFT);</span>
+<span class="fc bfc" id="L172" title="All 2 branches covered.">        if (review.isHidden()) {</span>
+<span class="fc" id="L173">            top.getChildren().add(AdminUi.badge(&quot;Hidden&quot;, &quot;badge-rejected&quot;));</span>
+        }
+<span class="fc" id="L175">        top.getChildren().add(AdminUi.badge(review.getRating() + &quot; / 5&quot;, &quot;badge-sold&quot;));</span>
+
+<span class="fc" id="L177">        Label parties = new Label(&quot;Seller: @&quot; + review.getSellerUsername()</span>
+<span class="fc" id="L178">                + &quot;  ·  Buyer: @&quot; + review.getBuyerUsername());</span>
+<span class="fc" id="L179">        parties.setStyle(&quot;-fx-font-weight: 600;&quot;);</span>
+
+<span class="fc bfc" id="L181" title="All 2 branches covered.">        Label listing = new Label(&quot;Listing: &quot; + (review.getListingTitle() == null</span>
+<span class="fc" id="L182">                ? &quot;—&quot; : review.getListingTitle()));</span>
+<span class="fc" id="L183">        listing.getStyleClass().add(&quot;muted&quot;);</span>
+
+<span class="fc bfc" id="L185" title="All 4 branches covered.">        Label comment = new Label(review.getComment() == null || review.getComment().isBlank()</span>
+<span class="fc" id="L186">                ? &quot;(no written comment)&quot; : review.getComment());</span>
+<span class="fc" id="L187">        comment.setWrapText(true);</span>
+<span class="fc" id="L188">        comment.setStyle(&quot;-fx-text-fill: #1a1a2e;&quot;);</span>
+
+<span class="fc" id="L190">        VBox details = new VBox(5, parties, listing, comment);</span>
+
+<span class="fc bfc" id="L192" title="All 4 branches covered.">        if (review.getSellerReply() != null &amp;&amp; !review.getSellerReply().isBlank()) {</span>
+<span class="fc" id="L193">            Label reply = new Label(&quot;Seller reply: &quot; + review.getSellerReply());</span>
+<span class="fc" id="L194">            reply.setWrapText(true);</span>
+<span class="fc" id="L195">            reply.setStyle(&quot;-fx-background-color: #f5f7fa; -fx-padding: 8; &quot;</span>
+                    + &quot;-fx-background-radius: 6; -fx-text-fill: #5a5a7a;&quot;);
+<span class="fc" id="L197">            details.getChildren().add(reply);</span>
+        }
+
+<span class="fc" id="L200">        double publicAverage = data.getPublicAverageRating(review.getSellerUsername());</span>
+<span class="fc" id="L201">        int publicCount = data.getPublicRatingCount(review.getSellerUsername());</span>
+<span class="fc" id="L202">        Label publicMeta = new Label(String.format(</span>
+<span class="fc" id="L203">                &quot;Public seller average: %.1f★ from %d visible review(s)&quot;, publicAverage, publicCount));</span>
+<span class="fc" id="L204">        publicMeta.getStyleClass().add(&quot;hint-text&quot;);</span>
+
+<span class="fc bfc" id="L206" title="All 2 branches covered.">        Label date = new Label(AdminUi.formatDate(review.getCreatedAt() == null</span>
+<span class="fc" id="L207">                ? null : review.getCreatedAt().toLocalDate()));</span>
+<span class="fc" id="L208">        date.getStyleClass().add(&quot;hint-text&quot;);</span>
+
+<span class="fc bfc" id="L210" title="All 2 branches covered.">        Button toggle = new Button(review.isHidden() ? &quot;Unhide&quot; : &quot;Hide&quot;);</span>
+<span class="fc bfc" id="L211" title="All 2 branches covered.">        toggle.getStyleClass().addAll(review.isHidden() ? &quot;btn-success&quot; : &quot;btn-danger&quot;, &quot;btn-sm&quot;);</span>
+<span class="fc" id="L212">        toggle.setOnAction(event -&gt; moderate(review));</span>
+
+<span class="fc" id="L214">        HBox footer = new HBox(10, date, publicMeta, AdminUi.spacer(), toggle);</span>
+<span class="fc" id="L215">        footer.setAlignment(Pos.CENTER_LEFT);</span>
+
+<span class="fc" id="L217">        card.getChildren().addAll(top, details, footer);</span>
+<span class="fc" id="L218">        com.hkust.marketplace.controllers.UiAnimations.hoverLift(card);</span>
+<span class="fc" id="L219">        return card;</span>
+    }
+
+    private void moderate(Rating review) {
+<span class="fc bfc" id="L223" title="All 2 branches covered.">        boolean hiding = !review.isHidden();</span>
+<span class="fc bfc" id="L224" title="All 2 branches covered.">        String action = hiding ? &quot;Hide rating&quot; : &quot;Unhide rating&quot;;</span>
+<span class="fc bfc" id="L225" title="All 2 branches covered.">        String message = hiding</span>
+<span class="fc" id="L226">                ? &quot;Hide this &quot; + review.getRating() + &quot;-star rating from @&quot;</span>
+<span class="fc" id="L227">                + review.getBuyerUsername() + &quot;?\n\nIt will no longer be publicly displayed &quot;</span>
+                + &quot;or counted in the seller's public average, but it is retained for audit.&quot;
+<span class="fc" id="L229">                : &quot;Make this rating visible again and include it in the seller's public average?&quot;;</span>
+<span class="fc bfc" id="L230" title="All 2 branches covered.">        if (!AdminDialogs.confirm(action, message)) {</span>
+<span class="fc" id="L231">            return;</span>
+        }
+
+<span class="fc" id="L234">        review.setHidden(hiding);</span>
+<span class="fc" id="L235">        data.updateRating(review);</span>
+<span class="fc" id="L236">        data.recalculateSellerRating(review.getSellerUsername());</span>
+<span class="fc bfc" id="L237" title="All 2 branches covered.">        data.logAudit(adminUsername(), hiding ? &quot;HIDE_REVIEW&quot; : &quot;UNHIDE_REVIEW&quot;,</span>
+<span class="fc" id="L238">                &quot;REVIEW&quot;, review.getId(),</span>
+<span class="fc" id="L239">                &quot;Seller @&quot; + review.getSellerUsername() + &quot;, &quot; + review.getRating() + &quot; stars&quot;);</span>
+<span class="fc" id="L240">        refresh();</span>
+<span class="fc" id="L241">    }</span>
+
+    private String adminUsername() {
+<span class="fc" id="L244">        User user = SessionManager.getCurrentUser();</span>
+<span class="pc bpc" id="L245" title="1 of 2 branches missed.">        return user == null ? DummyDataService.ADMIN_USERNAME : user.getUsername();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

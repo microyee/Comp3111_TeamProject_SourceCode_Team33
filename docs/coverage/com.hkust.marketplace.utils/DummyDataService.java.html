@@ -1,0 +1,1039 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DummyDataService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HKUST Marketplace</a> &gt; <a href="index.source.html" class="el_package">com.hkust.marketplace.utils</a> &gt; <span class="el_source">DummyDataService.java</span></div><h1>DummyDataService.java</h1><pre class="source lang-java linenums">package com.hkust.marketplace.utils;
+
+import com.hkust.marketplace.models.*;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Locale;
+import java.util.function.Supplier;
+import java.util.Random;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+
+/**
+ * In-memory data store for the frontend demo.
+ *
+ * &lt;p&gt;All data is lost when the application closes.  The service deliberately keeps the
+ * &quot;business rules&quot; (approval, take-down, soft delete, notification, rating visibility)
+ * here rather than in the JavaFX controllers so the same rules are applied no matter
+ * which screen triggers them.&lt;/p&gt;
+ *
+ * &lt;p&gt;TODO: Replace this service with real repositories / API clients.&lt;/p&gt;
+ */
+public class DummyDataService {
+
+
+
+    /** Username of the seeded administrator account. */
+    public static final String ADMIN_USERNAME = &quot;admin&quot;;
+
+<span class="fc" id="L38">    private final Map&lt;String, User&gt; users = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc" id="L39">    private final Map&lt;String, Listing&gt; listings = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc" id="L40">    private final List&lt;Request&gt; requests = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L41">    private final List&lt;Deal&gt; deals = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L42">    private final List&lt;Notification&gt; notifications = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L43">    private final List&lt;Rating&gt; ratings = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L44">    private final List&lt;Chat&gt; chats = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L45">    private final List&lt;AuditLogEntry&gt; auditLog = new ArrayList&lt;&gt;();</span>
+
+<span class="fc" id="L47">    private final AtomicInteger listingIdCounter = new AtomicInteger(100);</span>
+<span class="fc" id="L48">    private final AtomicInteger requestIdCounter = new AtomicInteger(1);</span>
+<span class="fc" id="L49">    private final AtomicInteger dealIdCounter = new AtomicInteger(500);</span>
+<span class="fc" id="L50">    private final AtomicInteger notifIdCounter = new AtomicInteger(1);</span>
+<span class="fc" id="L51">    private final AtomicInteger ratingIdCounter = new AtomicInteger(1);</span>
+<span class="fc" id="L52">    private final AtomicInteger chatIdCounter = new AtomicInteger(1);</span>
+<span class="fc" id="L53">    private final AtomicInteger messageIdCounter = new AtomicInteger(1);</span>
+
+    // Predefined HKUST locations
+<span class="fc" id="L56">    public static final List&lt;String&gt; HKUST_LOCATIONS = List.of(</span>
+            &quot;Academic Building (LG1)&quot;,
+            &quot;Library&quot;,
+            &quot;Student Centre&quot;,
+            &quot;Hall 1 Lobby&quot;,
+            &quot;Hall 2 Lobby&quot;,
+            &quot;Hall 3 Lobby&quot;,
+            &quot;Hall 4 Lobby&quot;,
+            &quot;Hall 5 Lobby&quot;,
+            &quot;Hall 6 Lobby&quot;,
+            &quot;Hall 7 Lobby&quot;,
+            &quot;Hall 8 Lobby&quot;,
+            &quot;Hall 9 Lobby&quot;,
+            &quot;UG Hall 1&quot;,
+            &quot;UG Hall 2&quot;,
+            &quot;North Gate&quot;,
+            &quot;South Gate&quot;,
+            &quot;Shaw Auditorium&quot;,
+            &quot;Coffee Shop (LG5)&quot;,
+            &quot;Sports Hall&quot;
+    );
+
+<span class="fc" id="L78">    public static final List&lt;String&gt; CATEGORIES = List.of(</span>
+            &quot;Textbooks&quot;, &quot;Electronics&quot;, &quot;Furniture&quot;, &quot;Clothing&quot;,
+            &quot;Stationery&quot;, &quot;Sports Equipment&quot;, &quot;Kitchenware&quot;, &quot;Others&quot;
+    );
+
+<span class="fc" id="L83">    public static final List&lt;String&gt; CONDITIONS = List.of(</span>
+            &quot;New&quot;, &quot;Like New&quot;, &quot;Used&quot;, &quot;For Parts&quot;
+    );
+
+    private static final class Singleton {
+<span class="fc" id="L88">        private static final DummyDataService INSTANCE = new DummyDataService(true, LocalDateTime::now);</span>
+    }
+
+<span class="fc" id="L91">    private final MarketplaceCatalog catalog = new MarketplaceCatalog(this);</span>
+    private final MarketplaceActivity activity;
+
+<span class="fc" id="L94">    DummyDataService(boolean seed, Supplier&lt;LocalDateTime&gt; time) {</span>
+<span class="fc" id="L95">        activity = new MarketplaceActivity(this, time);</span>
+<span class="fc bfc" id="L96" title="All 2 branches covered.">        if (seed) seedData();</span>
+<span class="fc" id="L97">    }</span>
+
+    public static DummyDataService getInstance() {
+<span class="fc" id="L100">        return Singleton.INSTANCE;</span>
+    }
+
+<span class="fc" id="L103">    public MarketplaceCatalog catalog() { return catalog; }</span>
+<span class="fc" id="L104">    public MarketplaceActivity activity() { return activity; }</span>
+
+    // =====================================================================
+    // Seed data
+    // =====================================================================
+
+    private void seedData() {
+        // Admin (password is hashed by the User constructor)
+<span class="fc" id="L112">        User admin = new Admin(&quot;admin&quot;, &quot;System Admin&quot;, &quot;admin123&quot;);</span>
+<span class="fc" id="L113">        admin.setFullName(&quot;HKUST Marketplace Admin&quot;);</span>
+<span class="fc" id="L114">        users.put(&quot;admin&quot;, admin);</span>
+
+        // Sample buyers
+<span class="fc" id="L117">        User buyer1 = new Buyer(&quot;alice&quot;, &quot;Alice Chan&quot;, &quot;password1&quot;);</span>
+<span class="fc" id="L118">        buyer1.setResidenceHall(&quot;Hall 3&quot;);</span>
+<span class="fc" id="L119">        users.put(&quot;alice&quot;, buyer1);</span>
+
+<span class="fc" id="L121">        User buyer2 = new Buyer(&quot;bob&quot;, &quot;Bob Wong&quot;, &quot;password1&quot;);</span>
+<span class="fc" id="L122">        buyer2.setResidenceHall(&quot;Off-campus&quot;);</span>
+<span class="fc" id="L123">        users.put(&quot;bob&quot;, buyer2);</span>
+
+        // Sample sellers
+<span class="fc" id="L126">        User seller1 = new Seller(&quot;charlie&quot;, &quot;Charlie Lee&quot;, &quot;password1&quot;);</span>
+<span class="fc" id="L127">        seller1.setBio(&quot;Final year CSE student selling textbooks and gadgets.&quot;);</span>
+<span class="fc" id="L128">        seller1.setPreferredMeetup(&quot;Library&quot;);</span>
+<span class="fc" id="L129">        users.put(&quot;charlie&quot;, seller1);</span>
+
+<span class="fc" id="L131">        User seller2 = new Seller(&quot;diana&quot;, &quot;Diana Ng&quot;, &quot;password1&quot;);</span>
+<span class="fc" id="L132">        seller2.setBio(&quot;Selling furniture and kitchen items before graduation.&quot;);</span>
+<span class="fc" id="L133">        seller2.setPreferredMeetup(&quot;Hall 5 Lobby&quot;);</span>
+<span class="fc" id="L134">        users.put(&quot;diana&quot;, seller2);</span>
+
+        // Sample listings: one listing for every status used by the admin screens.
+<span class="fc" id="L137">        Listing l1 = createListing(&quot;Calculus Textbook (Stewart)&quot;,</span>
+                &quot;Barely used, 8th edition. Perfect for MATH 1013.&quot;,
+<span class="fc" id="L139">                &quot;Textbooks&quot;, ListingType.SELL, &quot;Like New&quot;, 180.0, null,</span>
+                &quot;Library&quot;, &quot;charlie&quot;, &quot;Charlie Lee&quot;);
+<span class="fc" id="L141">        attachPhotos(l1, &quot;textbook-1.png&quot;, &quot;textbook-2.png&quot;);</span>
+<span class="fc" id="L142">        l1.setStatus(ListingStatus.RESERVED);</span>
+<span class="fc" id="L143">        l1.setPostedAt(LocalDateTime.now().minusDays(6));</span>
+<span class="fc" id="L144">        listings.put(l1.getId(), l1);</span>
+
+<span class="fc" id="L146">        Listing l2 = createListing(&quot;MacBook Pro Charger 61W&quot;,</span>
+                &quot;Original Apple charger, works perfectly.&quot;,
+<span class="fc" id="L148">                &quot;Electronics&quot;, ListingType.SELL, &quot;Used&quot;, 250.0, null,</span>
+                &quot;Academic Building (LG1)&quot;, &quot;charlie&quot;, &quot;Charlie Lee&quot;);
+<span class="fc" id="L150">        attachPhotos(l2, &quot;charger-1.png&quot;);</span>
+<span class="fc" id="L151">        l2.setStatus(ListingStatus.LIVE);</span>
+<span class="fc" id="L152">        l2.setPostedAt(LocalDateTime.now().minusDays(4));</span>
+<span class="fc" id="L153">        listings.put(l2.getId(), l2);</span>
+
+<span class="fc" id="L155">        Listing l3 = createListing(&quot;IKEA Desk Lamp&quot;,</span>
+                &quot;Good condition, LED bulb included.&quot;,
+                &quot;Furniture&quot;, ListingType.GIVEAWAY, &quot;Used&quot;, null, null,
+                &quot;Hall 5 Lobby&quot;, &quot;diana&quot;, &quot;Diana Ng&quot;);
+<span class="fc" id="L159">        attachPhotos(l3, &quot;lamp-1.png&quot;, &quot;lamp-2.png&quot;);</span>
+<span class="fc" id="L160">        l3.setStatus(ListingStatus.RESERVED);</span>
+<span class="fc" id="L161">        l3.setPostedAt(LocalDateTime.now().minusDays(3));</span>
+<span class="fc" id="L162">        listings.put(l3.getId(), l3);</span>
+
+<span class="fc" id="L164">        Listing l4 = createListing(&quot;Graphing Calculator TI-84&quot;,</span>
+                &quot;Can lend for one semester. Includes USB cable.&quot;,
+<span class="fc" id="L166">                &quot;Electronics&quot;, ListingType.LEND, &quot;Like New&quot;, null, 90,</span>
+                &quot;Student Centre&quot;, &quot;diana&quot;, &quot;Diana Ng&quot;);
+<span class="fc" id="L168">        attachPhotos(l4, &quot;calculator-1.png&quot;);</span>
+<span class="fc" id="L169">        l4.setStatus(ListingStatus.LIVE);</span>
+<span class="fc" id="L170">        l4.setPostedAt(LocalDateTime.now().minusDays(2));</span>
+<span class="fc" id="L171">        listings.put(l4.getId(), l4);</span>
+
+<span class="fc" id="L173">        Listing l5 = createListing(&quot;Mini Fridge&quot;,</span>
+                &quot;Works well, cleaning required. Currently pending admin review.&quot;,
+<span class="fc" id="L175">                &quot;Furniture&quot;, ListingType.SELL, &quot;Used&quot;, 400.0, null,</span>
+                &quot;Hall 2 Lobby&quot;, &quot;diana&quot;, &quot;Diana Ng&quot;);
+<span class="fc" id="L177">        attachPhotos(l5, &quot;fridge-1.png&quot;);</span>
+<span class="fc" id="L178">        l5.setStatus(ListingStatus.PENDING_REVIEW);</span>
+<span class="fc" id="L179">        l5.setPostedAt(LocalDateTime.now().minusHours(5));</span>
+<span class="fc" id="L180">        listings.put(l5.getId(), l5);</span>
+
+<span class="fc" id="L182">        Listing l6 = createListing(&quot;Broken Wooden Chair&quot;,</span>
+                &quot;One leg is cracked and the seat is unstable. Suitable for parts only.&quot;,
+<span class="fc" id="L184">                &quot;Furniture&quot;, ListingType.SELL, &quot;For Parts&quot;, 50.0, null,</span>
+                &quot;Hall 2 Lobby&quot;, &quot;diana&quot;, &quot;Diana Ng&quot;);
+<span class="fc" id="L186">        attachPhotos(l6, &quot;chair-1.png&quot;);</span>
+<span class="fc" id="L187">        l6.setStatus(ListingStatus.REJECTED);</span>
+<span class="fc" id="L188">        l6.setRejectionReason(&quot;Safety risk: the broken leg is not clearly shown and the listing does not mention the gas-lift failure.&quot;);</span>
+<span class="fc" id="L189">        l6.setPostedAt(LocalDateTime.now().minusDays(9));</span>
+<span class="fc" id="L190">        l6.setReviewedAt(LocalDateTime.now().minusDays(8));</span>
+<span class="fc" id="L191">        listings.put(l6.getId(), l6);</span>
+
+<span class="fc" id="L193">        Listing l7 = createListing(&quot;Solid Wood Study Desk&quot;,</span>
+                &quot;Sturdy desk, assembled. Buyer must arrange transport.&quot;,
+<span class="fc" id="L195">                &quot;Furniture&quot;, ListingType.SELL, &quot;Used&quot;, 300.0, null,</span>
+                &quot;Hall 1 Lobby&quot;, &quot;charlie&quot;, &quot;Charlie Lee&quot;);
+<span class="fc" id="L197">        attachPhotos(l7, &quot;desk-1.png&quot;);</span>
+<span class="fc" id="L198">        l7.setStatus(ListingStatus.SOLD);</span>
+<span class="fc" id="L199">        l7.setPostedAt(LocalDateTime.now().minusDays(28));</span>
+<span class="fc" id="L200">        l7.setReviewedAt(LocalDateTime.now().minusDays(27));</span>
+<span class="fc" id="L201">        listings.put(l7.getId(), l7);</span>
+
+<span class="fc" id="L203">        Listing giveaway = createListing(&quot;Ceramic Coffee Mug&quot;, &quot;Clean mug, available for collection at the Library.&quot;,</span>
+                &quot;Kitchenware&quot;, ListingType.GIVEAWAY, &quot;Like New&quot;, null, null,
+                &quot;Library&quot;, &quot;charlie&quot;, &quot;Charlie Lee&quot;);
+<span class="fc" id="L206">        attachPhotos(giveaway, &quot;mug-1.png&quot;);</span>
+<span class="fc" id="L207">        giveaway.setStatus(ListingStatus.LIVE);</span>
+<span class="fc" id="L208">        addListing(giveaway);</span>
+
+<span class="fc" id="L210">        Listing hub = createListing(&quot;Belkin 7-Port USB Hub&quot;,</span>
+                &quot;Silver Belkin hub with seven USB ports. Great for a desk setup with several accessories.&quot;,
+<span class="fc" id="L212">                &quot;Electronics&quot;, ListingType.SELL, &quot;Like New&quot;, 120.0, null,</span>
+                &quot;Library&quot;, &quot;diana&quot;, &quot;Diana Ng&quot;);
+<span class="fc" id="L214">        attachPhotos(hub, &quot;hub-1.png&quot;);</span>
+<span class="fc" id="L215">        hub.setStatus(ListingStatus.LIVE);</span>
+<span class="fc" id="L216">        hub.setPostedAt(LocalDateTime.now().minusHours(7));</span>
+<span class="fc" id="L217">        addListing(hub);</span>
+
+<span class="fc" id="L219">        Listing yoga = createListing(&quot;Yoga Mat&quot;,</span>
+                &quot;Non-slip 6mm mat, lightly used. Can lend for up to 30 days.&quot;,
+<span class="fc" id="L221">                &quot;Sports Equipment&quot;, ListingType.LEND, &quot;Like New&quot;, null, 30,</span>
+                &quot;Sports Hall&quot;, &quot;charlie&quot;, &quot;Charlie Lee&quot;);
+<span class="fc" id="L223">        attachPhotos(yoga, &quot;yoga-1.png&quot;);</span>
+<span class="fc" id="L224">        yoga.setStatus(ListingStatus.LIVE);</span>
+<span class="fc" id="L225">        yoga.setPostedAt(LocalDateTime.now().minusHours(9));</span>
+<span class="fc" id="L226">        addListing(yoga);</span>
+
+<span class="fc" id="L228">        Listing organizer = createListing(&quot;Desk Organizer&quot;,</span>
+                &quot;Wooden stationery organizer with two compartments. Free to a good home.&quot;,
+                &quot;Stationery&quot;, ListingType.GIVEAWAY, &quot;Used&quot;, null, null,
+                &quot;Academic Building (LG1)&quot;, &quot;diana&quot;, &quot;Diana Ng&quot;);
+<span class="fc" id="L232">        attachPhotos(organizer, &quot;organizer-1.png&quot;);</span>
+<span class="fc" id="L233">        organizer.setStatus(ListingStatus.LIVE);</span>
+<span class="fc" id="L234">        organizer.setPostedAt(LocalDateTime.now().minusHours(12));</span>
+<span class="fc" id="L235">        addListing(organizer);</span>
+
+        // Sample requests and the deals they create.  Every seeded deal has a
+        // corresponding Request, matching the UML Request 1 — 0..1 Deal relationship.
+<span class="fc" id="L239">        LocalDateTime now = LocalDateTime.now();</span>
+<span class="fc" id="L240">        Request r1 = createRequest(l1, &quot;alice&quot;, &quot;Accepted&quot;, 160.0, null, null,</span>
+<span class="fc" id="L241">                now.minusDays(3), now.minusDays(3));</span>
+<span class="fc" id="L242">        Deal d1 = createDeal(r1, &quot;Accepted&quot;, null);</span>
+
+<span class="fc" id="L244">        Request r2 = createRequest(l4, &quot;alice&quot;, &quot;Pending&quot;, null,</span>
+<span class="fc" id="L245">                LocalDate.now().plusDays(1), LocalDate.now().plusDays(31),</span>
+<span class="fc" id="L246">                now.minusDays(1), null);</span>
+<span class="fc" id="L247">        Deal d2 = createDeal(r2, &quot;Pending&quot;, null);</span>
+
+<span class="fc" id="L249">        Request r3 = createRequest(l2, &quot;bob&quot;, &quot;Pending&quot;, 220.0, null, null,</span>
+<span class="fc" id="L250">                now.minusHours(2), null);</span>
+<span class="fc" id="L251">        Deal d3 = createDeal(r3, &quot;Pending&quot;, null);</span>
+
+<span class="fc" id="L253">        Request r4 = createRequest(l3, &quot;bob&quot;, &quot;Pending&quot;, null, null, null,</span>
+<span class="fc" id="L254">                now.minusHours(5), null);</span>
+<span class="fc" id="L255">        Deal d4 = createDeal(r4, &quot;Pending&quot;, null);</span>
+
+<span class="fc" id="L257">        Request r5 = createRequest(l7, &quot;bob&quot;, &quot;Accepted&quot;, 300.0, null, null,</span>
+<span class="fc" id="L258">                now.minusDays(25), now.minusDays(25));</span>
+<span class="fc" id="L259">        Deal d5 = createDeal(r5, &quot;Completed&quot;, now.minusDays(20));</span>
+
+<span class="fc" id="L261">        Request r6 = createRequest(l2, &quot;alice&quot;, &quot;Cancelled&quot;, 200.0, null, null,</span>
+<span class="fc" id="L262">                now.minusDays(5), now.minusDays(4));</span>
+<span class="fc" id="L263">        Deal d6 = createDeal(r6, &quot;Cancelled&quot;, null);</span>
+<span class="fc" id="L264">        d6.setCancelledAt(now.minusDays(4));</span>
+
+<span class="fc" id="L266">        Request r7 = createRequest(l4, &quot;bob&quot;, &quot;Accepted&quot;, null,</span>
+<span class="fc" id="L267">                LocalDate.now().minusDays(40), LocalDate.now().minusDays(10),</span>
+<span class="fc" id="L268">                now.minusDays(42), now.minusDays(40));</span>
+<span class="fc" id="L269">        Deal d7 = createDeal(r7, &quot;Completed&quot;, now.minusDays(10));</span>
+
+<span class="fc" id="L271">        Request r8 = createRequest(l4, &quot;alice&quot;, &quot;Accepted&quot;, null,</span>
+<span class="fc" id="L272">                LocalDate.now().minusDays(70), LocalDate.now().minusDays(30),</span>
+<span class="fc" id="L273">                now.minusDays(72), now.minusDays(70));</span>
+<span class="fc" id="L274">        Deal d8 = createDeal(r8, &quot;Returned&quot;, now.minusDays(30));</span>
+
+        // Sample ratings.  One hidden rating demonstrates the moderation workflow.
+<span class="fc" id="L277">        addSeedRating(null, &quot;charlie&quot;, &quot;bob&quot;, &quot;Calculus Textbook (Stewart)&quot;, 5,</span>
+                &quot;Very smooth transaction, book in excellent condition!&quot;, null,
+<span class="fc" id="L279">                now.minusDays(18), false);</span>
+<span class="fc" id="L280">        addSeedRating(null, &quot;charlie&quot;, &quot;alice&quot;, &quot;Calculus Textbook (Stewart)&quot;, 5,</span>
+                &quot;Textbook exactly as described. Charlie replied quickly.&quot;, null,
+<span class="fc" id="L282">                now.minusDays(12), false);</span>
+<span class="fc" id="L283">        addSeedRating(d5.getId(), &quot;charlie&quot;, &quot;bob&quot;, &quot;Solid Wood Study Desk&quot;, 4,</span>
+                &quot;Desk is sturdy. Transport was my responsibility, as advertised.&quot;, null,
+<span class="fc" id="L285">                now.minusDays(6), false);</span>
+<span class="fc" id="L286">        addSeedRating(null, &quot;diana&quot;, &quot;bob&quot;, &quot;IKEA Desk Lamp&quot;, 4,</span>
+                &quot;Lamp worked well. Meet-up was easy to arrange.&quot;, null,
+<span class="fc" id="L288">                now.minusDays(9), false);</span>
+<span class="fc" id="L289">        addSeedRating(d8.getId(), &quot;diana&quot;, &quot;alice&quot;, &quot;Graphing Calculator TI-84&quot;, 5,</span>
+                &quot;Calculator in great condition and the loan period was flexible.&quot;, null,
+<span class="fc" id="L291">                now.minusDays(4), false);</span>
+<span class="fc" id="L292">        addSeedRating(null, &quot;diana&quot;, &quot;alice&quot;, &quot;IKEA Desk Lamp&quot;, 3,</span>
+                &quot;Item was okay, but the meet-up was delayed by 30 minutes.&quot;,
+                &quot;Sorry about the delay – I messaged you in the chat thread.&quot;,
+<span class="fc" id="L295">                now.minusDays(2), true);</span>
+
+<span class="fc" id="L297">        recalculateSellerRating(&quot;charlie&quot;);</span>
+<span class="fc" id="L298">        recalculateSellerRating(&quot;diana&quot;);</span>
+
+        // A seeded private chat thread (the Chat use case is outside the Admin task,
+        // but the domain relationship is modelled and retained).
+<span class="fc" id="L302">        Chat chat = new Chat();</span>
+<span class="fc" id="L303">        chat.setId(&quot;C&quot; + chatIdCounter.getAndIncrement());</span>
+<span class="fc" id="L304">        chat.setListingId(l1.getId());</span>
+<span class="fc" id="L305">        chat.setListingTitle(l1.getTitle());</span>
+<span class="fc" id="L306">        chat.setBuyerUsername(&quot;alice&quot;);</span>
+<span class="fc" id="L307">        chat.setSellerUsername(&quot;charlie&quot;);</span>
+<span class="fc" id="L308">        chat.setCreatedAt(now.minusDays(4));</span>
+<span class="fc" id="L309">        addMessage(chat, &quot;alice&quot;, &quot;Hi Charlie, is the textbook still available?&quot;,</span>
+<span class="fc" id="L310">                now.minusDays(4));</span>
+<span class="fc" id="L311">        addMessage(chat, &quot;charlie&quot;, &quot;Yes, it is. Are you free to meet at the Library?&quot;,</span>
+<span class="fc" id="L312">                now.minusDays(4).plusMinutes(5));</span>
+<span class="fc" id="L313">        chats.add(chat);</span>
+
+        // Sample notifications (IDs are assigned by addNotification, which also makes
+        // the mark-as-read workflow reliable).
+<span class="fc" id="L317">        Notification n1 = new Notification(&quot;alice&quot;, &quot;Offer Accepted&quot;,</span>
+                &quot;Charlie accepted your offer of HK$160 for Calculus Textbook.&quot;,
+<span class="fc" id="L319">                &quot;Offer&quot;, &quot;DEALS&quot;, d1.getId());</span>
+<span class="fc" id="L320">        addNotification(n1);</span>
+<span class="fc" id="L321">        n1.setRead(true);</span>
+
+<span class="fc" id="L323">        addNotification(new Notification(&quot;charlie&quot;, &quot;New Offer Received&quot;,</span>
+                &quot;Alice offered HK$160 for your Calculus Textbook.&quot;,
+<span class="fc" id="L325">                &quot;Offer&quot;, &quot;DEALS&quot;, d1.getId()));</span>
+<span class="fc" id="L326">        addNotification(new Notification(&quot;diana&quot;, &quot;Listing Pending&quot;,</span>
+                &quot;Your Mini Fridge listing is awaiting admin review.&quot;,
+<span class="fc" id="L328">                &quot;System&quot;, &quot;LISTINGS&quot;, l5.getId()));</span>
+<span class="fc" id="L329">        addNotification(new Notification(&quot;bob&quot;, &quot;Offer Cancelled&quot;,</span>
+                &quot;Your previous offer for MacBook Pro Charger 61W was cancelled.&quot;,
+<span class="fc" id="L331">                &quot;Offer&quot;, &quot;DEALS&quot;, d6.getId()));</span>
+
+<span class="fc" id="L333">        addNotification(new Notification(ADMIN_USERNAME, &quot;New Listing Submitted&quot;,</span>
+                &quot;Diana Ng submitted 'Mini Fridge' for review.&quot;,
+<span class="fc" id="L335">                &quot;Submission&quot;, &quot;REVIEW&quot;, l5.getId()));</span>
+<span class="fc" id="L336">        catalog.fileReport(buyer2, Report.Target.LISTING, l2.getId(), l2.getTitle(),</span>
+                &quot;Misleading condition description.&quot;);
+<span class="fc" id="L338">        addNotification(new Notification(ADMIN_USERNAME, &quot;User Account Updated&quot;,</span>
+                &quot;Seller charlie updated their preferred meet-up location to Library.&quot;,
+                &quot;Account&quot;, &quot;USERS&quot;, &quot;charlie&quot;));
+<span class="fc" id="L341">    }</span>
+
+    /** Attaches a generated demo photo set (classpath resources). */
+    private void attachPhotos(Listing listing, String... names) {
+<span class="fc" id="L345">        List&lt;String&gt; paths = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L346" title="All 2 branches covered.">        for (String name : names) {</span>
+<span class="fc" id="L347">            paths.add(&quot;/images/listings/&quot; + name);</span>
+        }
+<span class="fc" id="L349">        listing.setPhotoPaths(paths);</span>
+<span class="fc" id="L350">    }</span>
+
+    private Listing createListing(String title, String desc, String cat, ListingType type,
+                                  String condition, Double price, Integer days,
+                                  String meetup, String sellerUser, String sellerName) {
+<span class="fc" id="L355">        Listing l = new Listing();</span>
+<span class="fc" id="L356">        l.setId(&quot;L&quot; + listingIdCounter.getAndIncrement());</span>
+<span class="fc" id="L357">        l.setTitle(title);</span>
+<span class="fc" id="L358">        l.setDescription(desc);</span>
+<span class="fc" id="L359">        l.setCategory(cat);</span>
+<span class="fc" id="L360">        l.setType(type);</span>
+<span class="fc" id="L361">        l.setCondition(condition);</span>
+<span class="fc" id="L362">        l.setPrice(price);</span>
+<span class="fc" id="L363">        l.setLendingDays(days);</span>
+<span class="fc" id="L364">        l.setMeetupLocation(meetup);</span>
+<span class="fc" id="L365">        l.setSellerUsername(sellerUser);</span>
+<span class="fc" id="L366">        l.setSellerFullName(sellerName);</span>
+<span class="fc" id="L367">        l.setPostedAt(LocalDateTime.now().minusDays(new Random().nextInt(10)));</span>
+<span class="fc" id="L368">        return l;</span>
+    }
+
+    private Request createRequest(Listing listing, String buyer, String status, Double price,
+                                  LocalDate borrowStart, LocalDate borrowEnd,
+                                  LocalDateTime createdAt, LocalDateTime respondedAt) {
+<span class="fc" id="L374">        Request request = new Request();</span>
+<span class="fc" id="L375">        request.setId(&quot;RQ&quot; + requestIdCounter.getAndIncrement());</span>
+<span class="fc" id="L376">        request.setListingId(listing.getId());</span>
+<span class="fc" id="L377">        request.setListingTitle(listing.getTitle());</span>
+<span class="fc" id="L378">        request.setBuyerUsername(buyer);</span>
+<span class="fc" id="L379">        request.setSellerUsername(listing.getSellerUsername());</span>
+<span class="fc" id="L380">        request.setType(listing.getType());</span>
+<span class="fc" id="L381">        request.setStatus(status);</span>
+<span class="fc" id="L382">        request.setOfferPrice(price);</span>
+<span class="fc" id="L383">        request.setBorrowStart(borrowStart);</span>
+<span class="fc" id="L384">        request.setBorrowEnd(borrowEnd);</span>
+<span class="fc" id="L385">        request.setCreatedAt(createdAt);</span>
+<span class="fc" id="L386">        request.setRespondedAt(respondedAt);</span>
+<span class="fc" id="L387">        requests.add(request);</span>
+<span class="fc" id="L388">        return request;</span>
+    }
+
+    Deal createDeal(Request request, String status, LocalDateTime completedAt) {
+<span class="fc" id="L392">        Deal deal = new Deal();</span>
+<span class="fc" id="L393">        deal.setId(&quot;D&quot; + dealIdCounter.getAndIncrement());</span>
+<span class="fc" id="L394">        deal.setRequestId(request.getId());</span>
+<span class="fc" id="L395">        deal.setListingId(request.getListingId());</span>
+<span class="fc" id="L396">        deal.setListingTitle(request.getListingTitle());</span>
+<span class="fc" id="L397">        deal.setBuyerUsername(request.getBuyerUsername());</span>
+<span class="fc" id="L398">        deal.setSellerUsername(request.getSellerUsername());</span>
+<span class="fc" id="L399">        deal.setDealType(request.getType());</span>
+<span class="fc" id="L400">        deal.setStatus(status);</span>
+<span class="fc" id="L401">        deal.setOfferPrice(request.getOfferPrice());</span>
+<span class="fc" id="L402">        deal.setBorrowStartAt(request.getBorrowStartAt());</span>
+<span class="fc" id="L403">        deal.setBorrowEndAt(request.getBorrowEndAt());</span>
+<span class="fc" id="L404">        deal.setCategory(findListing(request.getListingId()).getCategory());</span>
+<span class="fc" id="L405">        deal.setCreatedAt(request.getCreatedAt());</span>
+<span class="fc" id="L406">        deal.setCompletedAt(completedAt);</span>
+<span class="fc" id="L407">        deals.add(deal);</span>
+<span class="fc" id="L408">        return deal;</span>
+    }
+
+    private void addSeedRating(String dealId, String seller, String buyer, String listingTitle,
+                               int rating, String comment, String sellerReply,
+                               LocalDateTime createdAt, boolean hidden) {
+<span class="fc" id="L414">        Rating r = new Rating();</span>
+<span class="fc" id="L415">        r.setId(&quot;R&quot; + ratingIdCounter.getAndIncrement());</span>
+<span class="fc" id="L416">        r.setDealId(dealId);</span>
+<span class="fc" id="L417">        r.setSellerUsername(seller);</span>
+<span class="fc" id="L418">        r.setBuyerUsername(buyer);</span>
+<span class="fc" id="L419">        r.setListingTitle(listingTitle);</span>
+<span class="fc" id="L420">        r.setRating(rating);</span>
+<span class="fc" id="L421">        r.setComment(comment);</span>
+<span class="fc" id="L422">        r.setSellerReply(sellerReply);</span>
+<span class="fc" id="L423">        r.setCreatedAt(createdAt);</span>
+<span class="fc" id="L424">        r.setHidden(hidden);</span>
+<span class="fc" id="L425">        ratings.add(r);</span>
+<span class="fc" id="L426">    }</span>
+
+    void addMessage(Chat chat, String sender, String content, LocalDateTime sentAt) {
+<span class="fc" id="L429">        Message message = new Message(sender, content);</span>
+<span class="fc" id="L430">        message.setId(&quot;M&quot; + messageIdCounter.getAndIncrement());</span>
+<span class="fc" id="L431">        message.setSentAt(sentAt);</span>
+<span class="fc" id="L432">        chat.addMessage(message);</span>
+<span class="fc" id="L433">    }</span>
+
+    // =====================================================================
+    // Users
+    // =====================================================================
+
+    /** Active and deactivated accounts, excluding soft-deleted accounts. */
+    public Collection&lt;User&gt; getAllUsers() {
+<span class="fc" id="L441">        return users.values().stream()</span>
+<span class="fc bfc" id="L442" title="All 2 branches covered.">                .filter(u -&gt; !u.isDeleted())</span>
+<span class="fc" id="L443">                .collect(Collectors.toList());</span>
+    }
+
+    /** Includes soft-deleted accounts; intended for audit/debugging only. */
+    public List&lt;User&gt; getAllUsersIncludingDeleted() {
+<span class="fc" id="L448">        return new ArrayList&lt;&gt;(users.values());</span>
+    }
+
+    public boolean usernameExists(String username) {
+<span class="pc bpc" id="L452" title="1 of 2 branches missed.">        if (username == null) return false;</span>
+<span class="fc" id="L453">        return users.containsKey(username.trim().toLowerCase(Locale.ROOT));</span>
+    }
+
+    public User findUser(String username) {
+<span class="pc bpc" id="L457" title="1 of 2 branches missed.">        if (username == null) return null;</span>
+<span class="fc" id="L458">        return users.get(username.trim().toLowerCase(Locale.ROOT));</span>
+    }
+
+    public synchronized void registerUser(User user) {
+<span class="fc" id="L462">        users.put(user.getUsername().toLowerCase(Locale.ROOT), user);</span>
+<span class="fc" id="L463">    }</span>
+
+    public synchronized void updateUser(User user) {
+<span class="fc" id="L466">        users.put(user.getUsername().toLowerCase(Locale.ROOT), user);</span>
+        // Listings keep a denormalised seller name for display; keep it in sync when an
+        // administrator edits the seller's full name.
+<span class="fc bfc" id="L469" title="All 2 branches covered.">        for (Listing listing : listings.values()) {</span>
+<span class="pc bpc" id="L470" title="1 of 2 branches missed.">            if (listing.getSellerUsername() != null</span>
+<span class="fc bfc" id="L471" title="All 2 branches covered.">                    &amp;&amp; listing.getSellerUsername().equalsIgnoreCase(user.getUsername())) {</span>
+<span class="fc" id="L472">                listing.setSellerFullName(user.getFullName());</span>
+            }
+<span class="fc" id="L474">        }</span>
+<span class="fc" id="L475">    }</span>
+
+    public List&lt;User&gt; getUsersByRole(UserRole role) {
+<span class="nc" id="L478">        return users.values().stream()</span>
+<span class="nc bnc" id="L479" title="All 4 branches missed.">                .filter(u -&gt; u.getRole() == role &amp;&amp; !u.isDeleted())</span>
+<span class="nc" id="L480">                .collect(Collectors.toList());</span>
+    }
+
+    /** Sellers who may be chosen when an admin creates a listing on their behalf. */
+    public List&lt;User&gt; getActiveSellers() {
+<span class="fc" id="L485">        return users.values().stream()</span>
+<span class="pc bpc" id="L486" title="1 of 6 branches missed.">                .filter(u -&gt; u.getRole() == UserRole.SELLER &amp;&amp; u.isActive() &amp;&amp; !u.isDeleted())</span>
+<span class="fc" id="L487">                .sorted(Comparator.comparing(User::getFullName, String.CASE_INSENSITIVE_ORDER))</span>
+<span class="fc" id="L488">                .collect(Collectors.toList());</span>
+    }
+
+    /**
+     * Deactivates an account.  The user cannot log in and their live listings disappear
+     * from the marketplace (they are retained and reappear on reactivation).
+     */
+    public synchronized boolean deactivateUser(String username, String actor) {
+<span class="fc" id="L496">        User user = findUser(username);</span>
+<span class="pc bpc" id="L497" title="1 of 8 branches missed.">        if (user == null || user.isDeleted() || !user.isActive() || user.getRole() == UserRole.ADMIN) return false;</span>
+
+<span class="fc" id="L499">        user.setActive(false);</span>
+<span class="fc" id="L500">        activity.cancelUnavailable(user);</span>
+<span class="fc" id="L501">        SessionManager.logoutIf(user.getUsername());</span>
+
+<span class="fc" id="L503">        addNotification(new Notification(user.getUsername(), &quot;Account Deactivated&quot;,</span>
+                &quot;Your account has been deactivated by an administrator. &quot;
+                        + &quot;You cannot log in until it is reactivated.&quot;,
+                &quot;Account&quot;));
+<span class="fc" id="L507">        addNotification(new Notification(actor, &quot;User Deactivated&quot;,</span>
+<span class="fc" id="L508">                &quot;@&quot; + user.getUsername() + &quot; (&quot; + user.getFullName() + &quot;) was deactivated.&quot;,</span>
+<span class="fc" id="L509">                &quot;Account&quot;, &quot;USERS&quot;, user.getUsername()));</span>
+<span class="fc" id="L510">        logAudit(actor, &quot;DEACTIVATE_USER&quot;, &quot;USER&quot;, user.getUsername(), &quot;Deactivated account&quot;);</span>
+<span class="fc" id="L511">        return true;</span>
+    }
+
+    /** Reactivates a previously deactivated account. */
+    public synchronized boolean reactivateUser(String username, String actor) {
+<span class="fc" id="L516">        User user = findUser(username);</span>
+<span class="fc bfc" id="L517" title="All 6 branches covered.">        if (user == null || user.isDeleted() || user.isActive()) return false;</span>
+
+<span class="fc" id="L519">        user.setActive(true);</span>
+<span class="fc" id="L520">        addNotification(new Notification(user.getUsername(), &quot;Account Reactivated&quot;,</span>
+                &quot;Your account has been reactivated by an administrator. You can log in again.&quot;,
+                &quot;Account&quot;));
+<span class="fc" id="L523">        addNotification(new Notification(actor, &quot;User Reactivated&quot;,</span>
+<span class="fc" id="L524">                &quot;@&quot; + user.getUsername() + &quot; (&quot; + user.getFullName() + &quot;) was reactivated.&quot;,</span>
+<span class="fc" id="L525">                &quot;Account&quot;, &quot;USERS&quot;, user.getUsername()));</span>
+<span class="fc" id="L526">        logAudit(actor, &quot;REACTIVATE_USER&quot;, &quot;USER&quot;, user.getUsername(), &quot;Reactivated account&quot;);</span>
+<span class="fc" id="L527">        return true;</span>
+    }
+
+    /**
+     * Soft-deletes an account.
+     *
+     * &lt;p&gt;The account is marked deleted and inactive, hidden from every user list, and
+     * can no longer log in.  The user's listings are set to REMOVED and disappear from
+     * the marketplace, while deals, chats and ratings are retained so history and the
+     * audit trail stay intact.  Active deals involving the account are cancelled and
+     * the counterparties are notified.&lt;/p&gt;
+     */
+    public synchronized boolean deleteUser(String username, String actor) {
+<span class="fc" id="L540">        User user = findUser(username);</span>
+<span class="fc bfc" id="L541" title="All 6 branches covered.">        if (user == null || user.isDeleted() || user.getRole() == UserRole.ADMIN) return false;</span>
+
+<span class="fc" id="L543">        LocalDateTime now = LocalDateTime.now();</span>
+<span class="fc" id="L544">        user.setDeleted(true);</span>
+<span class="fc" id="L545">        user.setActive(false);</span>
+<span class="fc" id="L546">        user.setDeletedAt(now);</span>
+<span class="fc" id="L547">        user.setDeletedBy(actor);</span>
+<span class="fc" id="L548">        SessionManager.logoutIf(user.getUsername());</span>
+
+<span class="fc bfc" id="L550" title="All 2 branches covered.">        for (Listing listing : listings.values()) {</span>
+<span class="pc bpc" id="L551" title="1 of 2 branches missed.">            if (listing.getSellerUsername() != null</span>
+<span class="fc bfc" id="L552" title="All 2 branches covered.">                    &amp;&amp; listing.getSellerUsername().equalsIgnoreCase(user.getUsername())</span>
+<span class="pc bpc" id="L553" title="1 of 2 branches missed.">                    &amp;&amp; listing.getStatus() != ListingStatus.REMOVED) {</span>
+<span class="fc" id="L554">                listing.setStatus(ListingStatus.REMOVED);</span>
+<span class="fc" id="L555">                listing.setRemovalReason(&quot;Seller account deleted&quot;);</span>
+<span class="fc" id="L556">                listing.setRemovedAt(now);</span>
+<span class="fc" id="L557">                listing.setRemovedBy(actor);</span>
+            }
+<span class="fc" id="L559">        }</span>
+
+<span class="fc" id="L561">        activity.cancelUnavailable(user);</span>
+
+<span class="fc" id="L563">        addNotification(new Notification(actor, &quot;User Deleted&quot;,</span>
+<span class="fc" id="L564">                &quot;@&quot; + user.getUsername() + &quot; (&quot; + user.getFullName() + &quot;) was soft-deleted. &quot;</span>
+                        + &quot;Listings were removed; deals and ratings were retained for audit.&quot;,
+<span class="fc" id="L566">                &quot;Account&quot;, &quot;USERS&quot;, user.getUsername()));</span>
+<span class="fc" id="L567">        logAudit(actor, &quot;DELETE_USER&quot;, &quot;USER&quot;, user.getUsername(),</span>
+<span class="fc" id="L568">                &quot;Soft delete; role=&quot; + user.getRole());</span>
+<span class="fc" id="L569">        return true;</span>
+    }
+
+    // =====================================================================
+    // Listings
+    // =====================================================================
+
+    public Collection&lt;Listing&gt; getAllListings() {
+<span class="fc" id="L577">        return listings.values();</span>
+    }
+
+    /**
+     * Listings visible in the buyer marketplace: LIVE listings whose seller is still
+     * active.  Deactivating a seller therefore hides their listings without deleting
+     * them; reactivation makes them visible again.
+     */
+    public List&lt;Listing&gt; getLiveListings() {
+<span class="fc" id="L586">        return listings.values().stream()</span>
+<span class="fc bfc" id="L587" title="All 2 branches covered.">                .filter(l -&gt; l.getStatus() == ListingStatus.LIVE)</span>
+<span class="fc" id="L588">                .filter(l -&gt; {</span>
+<span class="fc" id="L589">                    User seller = findUser(l.getSellerUsername());</span>
+<span class="pc bpc" id="L590" title="1 of 6 branches missed.">                    return seller != null &amp;&amp; seller.isActive() &amp;&amp; !seller.isDeleted();</span>
+                })
+<span class="fc" id="L592">                .collect(Collectors.toList());</span>
+    }
+
+    public List&lt;Listing&gt; getPendingListings() {
+<span class="fc" id="L596">        return listings.values().stream()</span>
+<span class="fc bfc" id="L597" title="All 2 branches covered.">                .filter(l -&gt; l.getStatus() == ListingStatus.PENDING_REVIEW)</span>
+<span class="fc" id="L598">                .sorted(Comparator.comparing(Listing::getPostedAt,</span>
+<span class="fc" id="L599">                        Comparator.nullsLast(Comparator.naturalOrder())))</span>
+<span class="fc" id="L600">                .collect(Collectors.toList());</span>
+    }
+
+    public List&lt;Listing&gt; getListingsBySeller(String username) {
+<span class="fc" id="L604">        return listings.values().stream()</span>
+<span class="pc bpc" id="L605" title="1 of 2 branches missed.">                .filter(l -&gt; l.getSellerUsername() != null</span>
+<span class="fc bfc" id="L606" title="All 2 branches covered.">                        &amp;&amp; l.getSellerUsername().equalsIgnoreCase(username))</span>
+<span class="fc" id="L607">                .collect(Collectors.toList());</span>
+    }
+
+    public Listing findListing(String id) {
+<span class="fc bfc" id="L611" title="All 2 branches covered.">        return id == null ? null : listings.get(id);</span>
+    }
+
+    public synchronized void addListing(Listing listing) {
+<span class="fc bfc" id="L615" title="All 2 branches covered.">        if (listing.getId() == null) {</span>
+<span class="fc" id="L616">            listing.setId(&quot;L&quot; + listingIdCounter.getAndIncrement());</span>
+        }
+<span class="fc" id="L618">        listings.put(listing.getId(), listing);</span>
+<span class="fc" id="L619">    }</span>
+
+    public synchronized void updateListing(Listing listing) {
+<span class="fc" id="L622">        listings.put(listing.getId(), listing);</span>
+<span class="fc" id="L623">    }</span>
+
+    /** Hard removal, used by seller-side demo screens.  Admin take-down uses REMOVED. */
+    public synchronized void removeListing(String id) {
+<span class="fc" id="L627">        listings.remove(id);</span>
+<span class="fc" id="L628">    }</span>
+
+    /** Approves a pending listing and publishes it to the marketplace. */
+    public synchronized boolean approveListing(String listingId, String actor) {
+<span class="fc" id="L632">        Listing listing = findListing(listingId);</span>
+<span class="fc bfc" id="L633" title="All 4 branches covered.">        if (listing == null || listing.getStatus() != ListingStatus.PENDING_REVIEW) {</span>
+<span class="fc" id="L634">            return false;</span>
+        }
+<span class="fc" id="L636">        listing.setStatus(ListingStatus.LIVE);</span>
+<span class="fc" id="L637">        listing.setReviewedAt(LocalDateTime.now());</span>
+<span class="fc" id="L638">        listing.setRejectionReason(null);</span>
+<span class="fc" id="L639">        boolean visible = catalog.isPublic(listing);</span>
+<span class="fc bfc" id="L640" title="All 2 branches covered.">        String availability = visible ? &quot;is now live in the marketplace.&quot;</span>
+<span class="fc" id="L641">                : &quot;will appear in the marketplace when your account is active.&quot;;</span>
+<span class="fc" id="L642">        addNotification(new Notification(listing.getSellerUsername(), &quot;Listing Approved&quot;,</span>
+<span class="fc" id="L643">                &quot;Your listing '&quot; + listing.getTitle() + &quot;' &quot; + availability,</span>
+<span class="fc" id="L644">                &quot;System&quot;, &quot;LISTINGS&quot;, listing.getId()));</span>
+<span class="fc bfc" id="L645" title="All 2 branches covered.">        if (visible) catalog.notifyFollowers(listing);</span>
+<span class="fc" id="L646">        logAudit(actor, &quot;APPROVE_LISTING&quot;, &quot;LISTING&quot;, listing.getId(), listing.getTitle());</span>
+<span class="fc" id="L647">        return true;</span>
+    }
+
+    /** Rejects a pending listing.  The reason is stored and sent to the seller. */
+    public synchronized boolean rejectListing(String listingId, String reason, String actor) {
+<span class="pc bpc" id="L652" title="1 of 4 branches missed.">        if (reason == null || reason.isBlank()) return false;</span>
+<span class="fc" id="L653">        Listing listing = findListing(listingId);</span>
+<span class="fc bfc" id="L654" title="All 4 branches covered.">        if (listing == null || listing.getStatus() != ListingStatus.PENDING_REVIEW) {</span>
+<span class="fc" id="L655">            return false;</span>
+        }
+<span class="fc" id="L657">        listing.setStatus(ListingStatus.REJECTED);</span>
+<span class="fc" id="L658">        listing.setRejectionReason(reason.trim());</span>
+<span class="fc" id="L659">        listing.setReviewedAt(LocalDateTime.now());</span>
+<span class="fc" id="L660">        addNotification(new Notification(listing.getSellerUsername(), &quot;Listing Rejected&quot;,</span>
+<span class="fc" id="L661">                &quot;Your listing '&quot; + listing.getTitle() + &quot;' was rejected. Reason: &quot; + reason.trim(),</span>
+<span class="fc" id="L662">                &quot;System&quot;, &quot;LISTINGS&quot;, listing.getId()));</span>
+<span class="fc" id="L663">        logAudit(actor, &quot;REJECT_LISTING&quot;, &quot;LISTING&quot;, listing.getId(),</span>
+<span class="fc" id="L664">                reason.trim());</span>
+<span class="fc" id="L665">        return true;</span>
+    }
+
+    /**
+     * Takes a live listing down.
+     *
+     * @return the number of active offers cancelled, or -1 when the listing is missing
+     *         or no longer live.
+     */
+    public synchronized int takeDownListing(String listingId, String reason, String actor) {
+<span class="pc bpc" id="L675" title="1 of 4 branches missed.">        if (reason == null || reason.isBlank()) return -1;</span>
+<span class="fc" id="L676">        Listing listing = findListing(listingId);</span>
+<span class="fc bfc" id="L677" title="All 4 branches covered.">        if (listing == null || listing.getStatus() != ListingStatus.LIVE) return -1;</span>
+
+<span class="fc" id="L679">        LocalDateTime now = LocalDateTime.now();</span>
+<span class="fc" id="L680">        listing.setStatus(ListingStatus.REMOVED);</span>
+<span class="fc" id="L681">        listing.setRemovalReason(reason.trim());</span>
+<span class="fc" id="L682">        listing.setRemovedAt(now);</span>
+<span class="fc" id="L683">        listing.setRemovedBy(actor);</span>
+<span class="fc" id="L684">        listing.setReviewedAt(now);</span>
+
+<span class="fc" id="L686">        addNotification(new Notification(listing.getSellerUsername(), &quot;Listing Removed&quot;,</span>
+<span class="fc" id="L687">                &quot;Your listing '&quot; + listing.getTitle() + &quot;' was removed by an administrator. &quot;</span>
+<span class="fc" id="L688">                        + &quot;Reason: &quot; + reason.trim(),</span>
+<span class="fc" id="L689">                &quot;System&quot;, &quot;LISTINGS&quot;, listing.getId()));</span>
+
+<span class="fc" id="L691">        int cancelled = 0;</span>
+<span class="fc" id="L692">        Set&lt;String&gt; handledDealIds = new HashSet&lt;&gt;();</span>
+
+        // Cancel every active request for this listing and its linked deal.
+<span class="fc bfc" id="L695" title="All 2 branches covered.">        for (Request request : requests) {</span>
+<span class="fc bfc" id="L696" title="All 4 branches covered.">            if (!listing.getId().equals(request.getListingId()) || !request.isActive()) continue;</span>
+
+<span class="fc" id="L698">            request.setStatus(&quot;Cancelled&quot;);</span>
+<span class="fc" id="L699">            request.setRespondedAt(now);</span>
+<span class="fc" id="L700">            cancelled++;</span>
+
+<span class="fc" id="L702">            Deal linkedDeal = findDealForRequest(request.getId());</span>
+<span class="pc bpc" id="L703" title="1 of 4 branches missed.">            if (linkedDeal != null &amp;&amp; linkedDeal.isActiveOffer()) {</span>
+<span class="fc" id="L704">                linkedDeal.setStatus(&quot;Cancelled&quot;);</span>
+<span class="fc" id="L705">                linkedDeal.setCancelledAt(now);</span>
+<span class="fc" id="L706">                handledDealIds.add(linkedDeal.getId());</span>
+            }
+<span class="fc" id="L708">            addNotification(new Notification(request.getBuyerUsername(), &quot;Offer Cancelled&quot;,</span>
+<span class="fc" id="L709">                    &quot;The listing '&quot; + listing.getTitle() + &quot;' was removed by an administrator, &quot;</span>
+<span class="fc" id="L710">                            + &quot;so your request was cancelled. Reason: &quot; + reason.trim(),</span>
+<span class="fc bfc" id="L711" title="All 2 branches covered.">                    &quot;Offer&quot;, linkedDeal == null ? null : &quot;DEALS&quot;,</span>
+<span class="fc bfc" id="L712" title="All 2 branches covered.">                    linkedDeal == null ? null : linkedDeal.getId()));</span>
+<span class="fc" id="L713">        }</span>
+
+        // Defensive fallback for an active deal that has no active Request record.
+<span class="fc bfc" id="L716" title="All 2 branches covered.">        for (Deal deal : deals) {</span>
+<span class="fc bfc" id="L717" title="All 4 branches covered.">            if (!listing.getId().equals(deal.getListingId()) || !deal.isActiveOffer()) continue;</span>
+<span class="pc bpc" id="L718" title="1 of 2 branches missed.">            if (handledDealIds.contains(deal.getId())) continue;</span>
+
+<span class="fc" id="L720">            deal.setStatus(&quot;Cancelled&quot;);</span>
+<span class="fc" id="L721">            deal.setCancelledAt(now);</span>
+<span class="fc" id="L722">            cancelled++;</span>
+<span class="fc" id="L723">            addNotification(new Notification(deal.getBuyerUsername(), &quot;Offer Cancelled&quot;,</span>
+<span class="fc" id="L724">                    &quot;The listing '&quot; + listing.getTitle() + &quot;' was removed by an administrator, &quot;</span>
+<span class="fc" id="L725">                            + &quot;so your offer was cancelled. Reason: &quot; + reason.trim(),</span>
+<span class="fc" id="L726">                    &quot;Offer&quot;, &quot;DEALS&quot;, deal.getId()));</span>
+<span class="fc" id="L727">        }</span>
+
+<span class="fc" id="L729">        logAudit(actor, &quot;TAKE_DOWN_LISTING&quot;, &quot;LISTING&quot;, listing.getId(),</span>
+<span class="fc" id="L730">                reason.trim() + &quot; (cancelled &quot; + cancelled + &quot; active offer(s))&quot;);</span>
+<span class="fc" id="L731">        return cancelled;</span>
+    }
+
+    // =====================================================================
+    // Requests
+    // =====================================================================
+
+    public List&lt;Request&gt; getAllRequests() {
+<span class="fc" id="L739">        return requests.stream()</span>
+<span class="fc" id="L740">                .sorted(Comparator.comparing(Request::getCreatedAt,</span>
+<span class="fc" id="L741">                        Comparator.nullsLast(Comparator.naturalOrder())).reversed())</span>
+<span class="fc" id="L742">                .collect(Collectors.toList());</span>
+    }
+
+    public List&lt;Request&gt; getRequestsForBuyer(String username) {
+<span class="fc" id="L746">        return requests.stream()</span>
+<span class="pc bpc" id="L747" title="1 of 2 branches missed.">                .filter(r -&gt; r.getBuyerUsername() != null</span>
+<span class="fc bfc" id="L748" title="All 2 branches covered.">                        &amp;&amp; r.getBuyerUsername().equalsIgnoreCase(username))</span>
+<span class="fc" id="L749">                .collect(Collectors.toList());</span>
+    }
+
+    public List&lt;Request&gt; getRequestsForSeller(String username) {
+<span class="fc" id="L753">        return requests.stream()</span>
+<span class="pc bpc" id="L754" title="1 of 2 branches missed.">                .filter(r -&gt; r.getSellerUsername() != null</span>
+<span class="fc bfc" id="L755" title="All 2 branches covered.">                        &amp;&amp; r.getSellerUsername().equalsIgnoreCase(username))</span>
+<span class="fc" id="L756">                .collect(Collectors.toList());</span>
+    }
+
+    public List&lt;Request&gt; getRequestsForListing(String listingId) {
+<span class="nc" id="L760">        return requests.stream()</span>
+<span class="nc bnc" id="L761" title="All 4 branches missed.">                .filter(r -&gt; listingId != null &amp;&amp; listingId.equals(r.getListingId()))</span>
+<span class="nc" id="L762">                .collect(Collectors.toList());</span>
+    }
+
+    public List&lt;Request&gt; getActiveRequestsForListing(String listingId) {
+<span class="fc" id="L766">        return requests.stream()</span>
+<span class="pc bpc" id="L767" title="1 of 4 branches missed.">                .filter(r -&gt; listingId != null &amp;&amp; listingId.equals(r.getListingId()))</span>
+<span class="fc" id="L768">                .filter(Request::isActive)</span>
+<span class="fc" id="L769">                .collect(Collectors.toList());</span>
+    }
+
+    public Request findRequest(String id) {
+<span class="fc bfc" id="L773" title="All 2 branches covered.">        if (id == null) return null;</span>
+<span class="fc" id="L774">        return requests.stream().filter(r -&gt; id.equals(r.getId())).findFirst().orElse(null);</span>
+    }
+
+    public void addRequest(Request request) {
+<span class="pc bpc" id="L778" title="1 of 2 branches missed.">        if (request.getId() == null) {</span>
+<span class="fc" id="L779">            request.setId(&quot;RQ&quot; + requestIdCounter.getAndIncrement());</span>
+        }
+<span class="fc" id="L781">        requests.add(request);</span>
+<span class="fc" id="L782">    }</span>
+
+    /** The 0..1 Deal created from a Request, if any. */
+    public Deal findDealForRequest(String requestId) {
+<span class="pc bpc" id="L786" title="1 of 2 branches missed.">        if (requestId == null) return null;</span>
+<span class="fc" id="L787">        return deals.stream()</span>
+<span class="fc" id="L788">                .filter(d -&gt; requestId.equals(d.getRequestId()))</span>
+<span class="fc" id="L789">                .findFirst()</span>
+<span class="fc" id="L790">                .orElse(null);</span>
+    }
+
+    // =====================================================================
+    // Chats
+    // =====================================================================
+
+    public List&lt;Chat&gt; getAllChats() {
+<span class="fc" id="L798">        return new ArrayList&lt;&gt;(chats);</span>
+    }
+
+    public Chat findChat(String id) {
+<span class="pc bpc" id="L802" title="1 of 2 branches missed.">        if (id == null) return null;</span>
+<span class="fc" id="L803">        return chats.stream().filter(c -&gt; id.equals(c.getId())).findFirst().orElse(null);</span>
+    }
+
+    public List&lt;Chat&gt; getChatsForListing(String listingId) {
+<span class="fc" id="L807">        return chats.stream()</span>
+<span class="pc bpc" id="L808" title="1 of 4 branches missed.">                .filter(c -&gt; listingId != null &amp;&amp; listingId.equals(c.getListingId()))</span>
+<span class="fc" id="L809">                .collect(Collectors.toList());</span>
+    }
+
+    public List&lt;Chat&gt; getChatsForBuyer(String username) {
+<span class="fc" id="L813">        return chats.stream()</span>
+<span class="pc bpc" id="L814" title="1 of 2 branches missed.">                .filter(c -&gt; c.getBuyerUsername() != null</span>
+<span class="fc bfc" id="L815" title="All 2 branches covered.">                        &amp;&amp; c.getBuyerUsername().equalsIgnoreCase(username))</span>
+<span class="fc" id="L816">                .collect(Collectors.toList());</span>
+    }
+
+    public List&lt;Chat&gt; getChatsForSeller(String username) {
+<span class="fc" id="L820">        return chats.stream()</span>
+<span class="pc bpc" id="L821" title="1 of 2 branches missed.">                .filter(c -&gt; c.getSellerUsername() != null</span>
+<span class="fc bfc" id="L822" title="All 2 branches covered.">                        &amp;&amp; c.getSellerUsername().equalsIgnoreCase(username))</span>
+<span class="fc" id="L823">                .collect(Collectors.toList());</span>
+    }
+
+    public void addChat(Chat chat) {
+<span class="pc bpc" id="L827" title="1 of 2 branches missed.">        if (chat.getId() == null) {</span>
+<span class="fc" id="L828">            chat.setId(&quot;C&quot; + chatIdCounter.getAndIncrement());</span>
+        }
+<span class="fc" id="L830">        chats.add(chat);</span>
+<span class="fc" id="L831">    }</span>
+
+    // =====================================================================
+    // Deals
+    // =====================================================================
+
+    public List&lt;Deal&gt; getDealsForBuyer(String username) {
+<span class="fc" id="L838">        return deals.stream()</span>
+<span class="pc bpc" id="L839" title="1 of 2 branches missed.">                .filter(d -&gt; d.getBuyerUsername() != null</span>
+<span class="fc bfc" id="L840" title="All 2 branches covered.">                        &amp;&amp; d.getBuyerUsername().equalsIgnoreCase(username))</span>
+<span class="fc" id="L841">                .sorted(Comparator.comparing(Deal::getCreatedAt,</span>
+<span class="fc" id="L842">                        Comparator.nullsLast(Comparator.naturalOrder())).reversed())</span>
+<span class="fc" id="L843">                .collect(Collectors.toList());</span>
+    }
+
+    public List&lt;Deal&gt; getDealsForSeller(String username) {
+<span class="fc" id="L847">        return deals.stream()</span>
+<span class="pc bpc" id="L848" title="1 of 2 branches missed.">                .filter(d -&gt; d.getSellerUsername() != null</span>
+<span class="fc bfc" id="L849" title="All 2 branches covered.">                        &amp;&amp; d.getSellerUsername().equalsIgnoreCase(username))</span>
+<span class="fc" id="L850">                .sorted(Comparator.comparing(Deal::getCreatedAt,</span>
+<span class="fc" id="L851">                        Comparator.nullsLast(Comparator.naturalOrder())).reversed())</span>
+<span class="fc" id="L852">                .collect(Collectors.toList());</span>
+    }
+
+    public List&lt;Deal&gt; getDealsForListing(String listingId) {
+<span class="fc" id="L856">        return deals.stream()</span>
+<span class="pc bpc" id="L857" title="1 of 4 branches missed.">                .filter(d -&gt; listingId != null &amp;&amp; listingId.equals(d.getListingId()))</span>
+<span class="fc" id="L858">                .collect(Collectors.toList());</span>
+    }
+
+    public List&lt;Deal&gt; getAllDeals() {
+<span class="fc" id="L862">        return deals.stream()</span>
+<span class="fc" id="L863">                .sorted(Comparator.comparing(Deal::getCreatedAt,</span>
+<span class="fc" id="L864">                        Comparator.nullsLast(Comparator.naturalOrder())).reversed())</span>
+<span class="fc" id="L865">                .collect(Collectors.toList());</span>
+    }
+
+    public Deal findDeal(String id) {
+<span class="pc bpc" id="L869" title="1 of 2 branches missed.">        if (id == null) return null;</span>
+<span class="fc" id="L870">        return deals.stream().filter(d -&gt; id.equals(d.getId())).findFirst().orElse(null);</span>
+    }
+
+    public void addDeal(Deal deal) {
+<span class="pc bpc" id="L874" title="1 of 2 branches missed.">        if (deal.getId() == null) {</span>
+<span class="fc" id="L875">            deal.setId(&quot;D&quot; + dealIdCounter.getAndIncrement());</span>
+        }
+<span class="fc" id="L877">        deals.add(deal);</span>
+<span class="fc" id="L878">    }</span>
+
+    // =====================================================================
+    // Notifications
+    // =====================================================================
+
+    public List&lt;Notification&gt; getNotificationsFor(String username) {
+<span class="fc" id="L885">        return notifications.stream()</span>
+<span class="pc bpc" id="L886" title="1 of 2 branches missed.">                .filter(n -&gt; n.getUsername() != null</span>
+<span class="fc bfc" id="L887" title="All 2 branches covered.">                        &amp;&amp; n.getUsername().equalsIgnoreCase(username))</span>
+<span class="fc" id="L888">                .sorted(Comparator.comparing(Notification::getTimestamp).reversed())</span>
+<span class="fc" id="L889">                .collect(Collectors.toList());</span>
+    }
+
+    public void addNotification(Notification n) {
+<span class="pc bpc" id="L893" title="1 of 2 branches missed.">        if (n.getId() == null) {</span>
+<span class="fc" id="L894">            n.setId(&quot;N&quot; + notifIdCounter.getAndIncrement());</span>
+        }
+<span class="fc" id="L896">        notifications.add(n);</span>
+<span class="fc" id="L897">    }</span>
+
+    public int getUnreadCount(String username) {
+<span class="fc" id="L900">        return (int) notifications.stream()</span>
+<span class="pc bpc" id="L901" title="1 of 2 branches missed.">                .filter(n -&gt; n.getUsername() != null</span>
+<span class="fc bfc" id="L902" title="All 2 branches covered.">                        &amp;&amp; n.getUsername().equalsIgnoreCase(username))</span>
+<span class="fc bfc" id="L903" title="All 2 branches covered.">                .filter(n -&gt; !n.isRead())</span>
+<span class="fc" id="L904">                .count();</span>
+    }
+
+    public void markNotificationRead(String id) {
+<span class="pc bpc" id="L908" title="1 of 2 branches missed.">        if (id == null) return;</span>
+<span class="fc" id="L909">        notifications.stream()</span>
+<span class="fc" id="L910">                .filter(n -&gt; id.equals(n.getId()))</span>
+<span class="fc" id="L911">                .findFirst()</span>
+<span class="fc" id="L912">                .ifPresent(n -&gt; n.setRead(true));</span>
+<span class="fc" id="L913">    }</span>
+
+    public void markAllNotificationsRead(String username) {
+<span class="fc" id="L916">        notifications.stream()</span>
+<span class="pc bpc" id="L917" title="1 of 2 branches missed.">                .filter(n -&gt; n.getUsername() != null</span>
+<span class="fc bfc" id="L918" title="All 2 branches covered.">                        &amp;&amp; n.getUsername().equalsIgnoreCase(username))</span>
+<span class="fc" id="L919">                .forEach(n -&gt; n.setRead(true));</span>
+<span class="fc" id="L920">    }</span>
+
+    // =====================================================================
+    // Ratings
+    // =====================================================================
+
+    /** Public ratings only (hidden ratings are excluded). */
+    public List&lt;Rating&gt; getRatingsForSeller(String username) {
+<span class="fc" id="L928">        return ratings.stream()</span>
+<span class="pc bpc" id="L929" title="1 of 2 branches missed.">                .filter(r -&gt; r.getSellerUsername() != null</span>
+<span class="fc bfc" id="L930" title="All 2 branches covered.">                        &amp;&amp; r.getSellerUsername().equalsIgnoreCase(username)</span>
+<span class="fc bfc" id="L931" title="All 2 branches covered.">                        &amp;&amp; !r.isHidden())</span>
+<span class="fc" id="L932">                .collect(Collectors.toList());</span>
+    }
+
+    /** Every rating including hidden ones; used by the admin moderation screen. */
+    public List&lt;Rating&gt; getAllRatings() {
+<span class="fc" id="L937">        return ratings.stream()</span>
+<span class="fc" id="L938">                .sorted(Comparator.comparing(Rating::getCreatedAt,</span>
+<span class="fc" id="L939">                        Comparator.nullsLast(Comparator.naturalOrder())).reversed())</span>
+<span class="fc" id="L940">                .collect(Collectors.toList());</span>
+    }
+
+    public List&lt;Rating&gt; getAllRatingsForSeller(String username) {
+<span class="fc" id="L944">        return ratings.stream()</span>
+<span class="pc bpc" id="L945" title="1 of 2 branches missed.">                .filter(r -&gt; r.getSellerUsername() != null</span>
+<span class="fc bfc" id="L946" title="All 2 branches covered.">                        &amp;&amp; r.getSellerUsername().equalsIgnoreCase(username))</span>
+<span class="fc" id="L947">                .collect(Collectors.toList());</span>
+    }
+
+    public Rating findRating(String id) {
+<span class="pc bpc" id="L951" title="1 of 2 branches missed.">        if (id == null) return null;</span>
+<span class="fc" id="L952">        return ratings.stream().filter(r -&gt; id.equals(r.getId())).findFirst().orElse(null);</span>
+    }
+
+    /** Ratings are mutable in-memory objects; this keeps the API explicit. */
+    public void updateRating(Rating rating) {
+        // The list already holds the same object reference.
+<span class="fc" id="L958">    }</span>
+
+    public int getPublicRatingCount(String sellerUsername) {
+<span class="fc" id="L961">        return getRatingsForSeller(sellerUsername).size();</span>
+    }
+
+    /** Average of visible (non-hidden) ratings, or 0 when there are none. */
+    public double getPublicAverageRating(String sellerUsername) {
+<span class="fc" id="L966">        List&lt;Rating&gt; visible = getRatingsForSeller(sellerUsername);</span>
+<span class="fc bfc" id="L967" title="All 2 branches covered.">        if (visible.isEmpty()) return 0.0;</span>
+<span class="fc" id="L968">        return visible.stream().mapToInt(Rating::getRating).average().orElse(0.0);</span>
+    }
+
+    /** Recomputes the seller's public average after a rating is added or hidden. */
+    public void recalculateSellerRating(String sellerUsername) {
+<span class="fc" id="L973">        User seller = findUser(sellerUsername);</span>
+<span class="pc bpc" id="L974" title="1 of 2 branches missed.">        if (seller == null) return;</span>
+<span class="fc" id="L975">        List&lt;Rating&gt; visible = getRatingsForSeller(sellerUsername);</span>
+<span class="fc" id="L976">        seller.setRatingCount(visible.size());</span>
+<span class="fc bfc" id="L977" title="All 2 branches covered.">        seller.setAverageRating(visible.isEmpty()</span>
+<span class="fc" id="L978">                ? 0.0</span>
+<span class="fc" id="L979">                : visible.stream().mapToInt(Rating::getRating).average().orElse(0.0));</span>
+<span class="fc" id="L980">    }</span>
+
+    public void addRating(Rating r) {
+<span class="fc bfc" id="L983" title="All 2 branches covered.">        if (r.getId() == null) {</span>
+<span class="fc" id="L984">            r.setId(&quot;R&quot; + ratingIdCounter.getAndIncrement());</span>
+        }
+<span class="fc" id="L986">        ratings.add(r);</span>
+<span class="fc" id="L987">        recalculateSellerRating(r.getSellerUsername());</span>
+<span class="fc" id="L988">    }</span>
+
+    // =====================================================================
+    // Audit log
+    // =====================================================================
+
+    public void logAudit(String actorUsername, String action, String targetType,
+                         String targetId, String details) {
+<span class="fc" id="L996">        auditLog.add(new AuditLogEntry(actorUsername, action, targetType, targetId, details));</span>
+<span class="fc" id="L997">    }</span>
+
+    public List&lt;AuditLogEntry&gt; getAuditLog() {
+<span class="fc" id="L1000">        List&lt;AuditLogEntry&gt; copy = new ArrayList&lt;&gt;(auditLog);</span>
+<span class="fc" id="L1001">        copy.sort(Comparator.comparing(AuditLogEntry::getTimestamp).reversed());</span>
+<span class="fc" id="L1002">        return copy;</span>
+    }
+
+    // =====================================================================
+    // Validation
+    // =====================================================================
+
+    /**
+     * Password strength rule used by registration, admin &quot;Add User&quot;, and the admin
+     * profile screen: at least 8 characters with at least one uppercase letter, one
+     * lowercase letter and one digit.
+     *
+     * @return {@code &quot;OK&quot;} when valid, otherwise a message listing every failed rule.
+     */
+    public static String checkPasswordStrength(String password) {
+<span class="fc bfc" id="L1017" title="All 4 branches covered.">        if (password == null || password.isEmpty()) {</span>
+<span class="fc" id="L1018">            return &quot;Password cannot be empty.&quot;;</span>
+        }
+<span class="fc" id="L1020">        List&lt;String&gt; problems = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L1021" title="All 2 branches covered.">        if (password.length() &lt; 8) {</span>
+<span class="fc" id="L1022">            problems.add(&quot;at least 8 characters&quot;);</span>
+        }
+<span class="fc bfc" id="L1024" title="All 2 branches covered.">        if (password.chars().noneMatch(Character::isUpperCase)) {</span>
+<span class="fc" id="L1025">            problems.add(&quot;an uppercase letter&quot;);</span>
+        }
+<span class="fc bfc" id="L1027" title="All 2 branches covered.">        if (password.chars().noneMatch(Character::isLowerCase)) {</span>
+<span class="fc" id="L1028">            problems.add(&quot;a lowercase letter&quot;);</span>
+        }
+<span class="fc bfc" id="L1030" title="All 2 branches covered.">        if (password.chars().noneMatch(Character::isDigit)) {</span>
+<span class="fc" id="L1031">            problems.add(&quot;a digit&quot;);</span>
+        }
+<span class="fc bfc" id="L1033" title="All 2 branches covered.">        if (problems.isEmpty()) {</span>
+<span class="fc" id="L1034">            return &quot;OK&quot;;</span>
+        }
+<span class="fc" id="L1036">        return &quot;Password must contain &quot; + String.join(&quot;, &quot;, problems) + &quot;.&quot;;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

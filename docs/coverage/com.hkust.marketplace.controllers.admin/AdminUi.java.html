@@ -1,0 +1,256 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AdminUi.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HKUST Marketplace</a> &gt; <a href="index.source.html" class="el_package">com.hkust.marketplace.controllers.admin</a> &gt; <span class="el_source">AdminUi.java</span></div><h1>AdminUi.java</h1><pre class="source lang-java linenums">package com.hkust.marketplace.controllers.admin;
+
+import com.hkust.marketplace.models.ListingStatus;
+import com.hkust.marketplace.utils.ImageSupport;
+import com.hkust.marketplace.models.UserRole;
+import com.hkust.marketplace.utils.SceneManager;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.Node;
+import javafx.scene.control.Label;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
+import javafx.scene.layout.VBox;
+import javafx.stage.Window;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
+/**
+ * Small presentation helpers shared by the admin screens.  Keeping these in one place
+ * keeps status colours, date formats and spacing consistent across Task 3.
+ */
+final class AdminUi {
+
+<span class="fc" id="L28">    static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern(&quot;dd MMM yyyy&quot;);</span>
+<span class="fc" id="L29">    static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern(&quot;dd MMM yyyy HH:mm&quot;);</span>
+
+    private AdminUi() {
+    }
+
+    static Label title(String text) {
+<span class="fc" id="L35">        Label label = new Label(text);</span>
+<span class="fc" id="L36">        label.setStyle(&quot;-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #1a1a2e;&quot;);</span>
+<span class="fc" id="L37">        return label;</span>
+    }
+
+    static Label fieldLabel(String text) {
+<span class="fc" id="L41">        Label label = new Label(text);</span>
+<span class="fc" id="L42">        label.setStyle(&quot;-fx-font-weight: 600; -fx-text-fill: #1a1a2e; -fx-font-size: 13px;&quot;);</span>
+<span class="fc" id="L43">        return label;</span>
+    }
+
+    static Label muted(String text) {
+<span class="fc" id="L47">        Label label = new Label(text);</span>
+<span class="fc" id="L48">        label.getStyleClass().add(&quot;muted&quot;);</span>
+<span class="fc" id="L49">        return label;</span>
+    }
+
+    static Label hint(String text) {
+<span class="fc" id="L53">        Label label = new Label(text);</span>
+<span class="fc" id="L54">        label.getStyleClass().add(&quot;hint-text&quot;);</span>
+<span class="fc" id="L55">        label.setWrapText(true);</span>
+<span class="fc" id="L56">        return label;</span>
+    }
+
+    static Label errorLabel() {
+<span class="fc" id="L60">        Label label = new Label();</span>
+<span class="fc" id="L61">        label.getStyleClass().add(&quot;error-text&quot;);</span>
+<span class="fc" id="L62">        label.setWrapText(true);</span>
+<span class="fc" id="L63">        label.setVisible(false);</span>
+<span class="fc" id="L64">        label.setManaged(false);</span>
+<span class="fc" id="L65">        return label;</span>
+    }
+
+    static Label successLabel() {
+<span class="fc" id="L69">        Label label = new Label();</span>
+<span class="fc" id="L70">        label.getStyleClass().add(&quot;success-text&quot;);</span>
+<span class="fc" id="L71">        label.setWrapText(true);</span>
+<span class="fc" id="L72">        label.setVisible(false);</span>
+<span class="fc" id="L73">        label.setManaged(false);</span>
+<span class="fc" id="L74">        return label;</span>
+    }
+
+    static void setMessage(Label label, String message, boolean error) {
+<span class="fc bfc" id="L78" title="All 2 branches covered.">        label.setText(message == null ? &quot;&quot; : message);</span>
+<span class="fc bfc" id="L79" title="All 4 branches covered.">        label.setVisible(message != null &amp;&amp; !message.isBlank());</span>
+<span class="fc bfc" id="L80" title="All 4 branches covered.">        label.setManaged(message != null &amp;&amp; !message.isBlank());</span>
+<span class="fc" id="L81">        label.getStyleClass().removeAll(&quot;error-text&quot;, &quot;success-text&quot;);</span>
+<span class="fc bfc" id="L82" title="All 2 branches covered.">        label.getStyleClass().add(error ? &quot;error-text&quot; : &quot;success-text&quot;);</span>
+<span class="fc" id="L83">    }</span>
+
+    static void clear(Label... labels) {
+<span class="fc bfc" id="L86" title="All 2 branches covered.">        for (Label label : labels) {</span>
+<span class="fc" id="L87">            label.setText(&quot;&quot;);</span>
+<span class="fc" id="L88">            label.setVisible(false);</span>
+<span class="fc" id="L89">            label.setManaged(false);</span>
+        }
+<span class="fc" id="L91">    }</span>
+
+    static Label badge(String text, String styleClass) {
+<span class="fc" id="L94">        Label label = new Label(text);</span>
+<span class="fc" id="L95">        label.getStyleClass().add(&quot;badge&quot;);</span>
+<span class="fc bfc" id="L96" title="All 2 branches covered.">        if (styleClass != null) {</span>
+<span class="fc" id="L97">            label.getStyleClass().add(styleClass);</span>
+        }
+<span class="fc" id="L99">        return label;</span>
+    }
+
+    static Label statusBadge(ListingStatus status) {
+<span class="fc" id="L103">        return badge(statusText(status), statusStyle(status));</span>
+    }
+
+    static String statusText(ListingStatus status) {
+<span class="fc bfc" id="L107" title="All 2 branches covered.">        if (status == null) return &quot;Unknown&quot;;</span>
+<span class="fc bfc" id="L108" title="All 8 branches covered.">        return switch (status) {</span>
+<span class="fc" id="L109">            case PENDING_REVIEW -&gt; &quot;Pending Review&quot;;</span>
+<span class="fc" id="L110">            case LIVE -&gt; &quot;Live&quot;;</span>
+<span class="fc" id="L111">            case REJECTED -&gt; &quot;Rejected&quot;;</span>
+<span class="fc" id="L112">            case RESERVED -&gt; &quot;Reserved&quot;;</span>
+<span class="fc" id="L113">            case SOLD -&gt; &quot;Sold&quot;;</span>
+<span class="fc" id="L114">            case LENT -&gt; &quot;Lent&quot;;</span>
+<span class="fc" id="L115">            case GIVEN -&gt; &quot;Given&quot;;</span>
+<span class="fc" id="L116">            case REMOVED -&gt; &quot;Removed&quot;;</span>
+        };
+    }
+
+    static String statusStyle(ListingStatus status) {
+<span class="fc bfc" id="L121" title="All 2 branches covered.">        if (status == null) return &quot;badge-removed&quot;;</span>
+<span class="fc bfc" id="L122" title="All 8 branches covered.">        return switch (status) {</span>
+<span class="fc" id="L123">            case LIVE -&gt; &quot;badge-live&quot;;</span>
+<span class="fc" id="L124">            case PENDING_REVIEW -&gt; &quot;badge-pending&quot;;</span>
+<span class="fc" id="L125">            case REJECTED -&gt; &quot;badge-rejected&quot;;</span>
+<span class="fc" id="L126">            case RESERVED -&gt; &quot;badge-reserved&quot;;</span>
+<span class="fc" id="L127">            case SOLD -&gt; &quot;badge-sold&quot;;</span>
+<span class="fc" id="L128">            case LENT -&gt; &quot;badge-lent&quot;;</span>
+<span class="fc" id="L129">            case GIVEN -&gt; &quot;badge-given&quot;;</span>
+<span class="fc" id="L130">            case REMOVED -&gt; &quot;badge-removed&quot;;</span>
+        };
+    }
+
+    /** Compact status label for dense tables. */
+    static String statusShortText(ListingStatus status) {
+<span class="fc bfc" id="L136" title="All 2 branches covered.">        if (status == null) return &quot;Unknown&quot;;</span>
+<span class="fc bfc" id="L137" title="All 8 branches covered.">        return switch (status) {</span>
+<span class="fc" id="L138">            case PENDING_REVIEW -&gt; &quot;Pending&quot;;</span>
+<span class="fc" id="L139">            case LIVE -&gt; &quot;Live&quot;;</span>
+<span class="fc" id="L140">            case REJECTED -&gt; &quot;Rejected&quot;;</span>
+<span class="fc" id="L141">            case RESERVED -&gt; &quot;Reserved&quot;;</span>
+<span class="fc" id="L142">            case SOLD -&gt; &quot;Sold&quot;;</span>
+<span class="fc" id="L143">            case LENT -&gt; &quot;Lent&quot;;</span>
+<span class="fc" id="L144">            case GIVEN -&gt; &quot;Given&quot;;</span>
+<span class="fc" id="L145">            case REMOVED -&gt; &quot;Removed&quot;;</span>
+        };
+    }
+
+    static Label roleBadge(UserRole role) {
+<span class="fc bfc" id="L150" title="All 2 branches covered.">        if (role == null) return badge(&quot;Unknown&quot;, null);</span>
+<span class="fc bfc" id="L151" title="All 3 branches covered.">        return switch (role) {</span>
+<span class="fc" id="L152">            case BUYER -&gt; badge(&quot;Buyer&quot;, &quot;badge-sold&quot;);</span>
+<span class="fc" id="L153">            case SELLER -&gt; badge(&quot;Seller&quot;, &quot;badge-reserved&quot;);</span>
+<span class="fc" id="L154">            case ADMIN -&gt; badge(&quot;Admin&quot;, &quot;badge-live&quot;);</span>
+        };
+    }
+
+    static Label userStatusBadge(boolean active) {
+<span class="fc bfc" id="L159" title="All 2 branches covered.">        return active ? badge(&quot;Active&quot;, &quot;badge-active&quot;) : badge(&quot;Deactivated&quot;, &quot;badge-inactive&quot;);</span>
+    }
+
+    static Label dealStatusBadge(String status) {
+<span class="fc bfc" id="L163" title="All 2 branches covered.">        String value = status == null ? &quot;Unknown&quot; : status;</span>
+<span class="fc bfc" id="L164" title="All 6 branches covered.">        String style = switch (value.toLowerCase()) {</span>
+<span class="fc" id="L165">            case &quot;pending&quot; -&gt; &quot;badge-pending&quot;;</span>
+<span class="fc" id="L166">            case &quot;accepted&quot; -&gt; &quot;badge-live&quot;;</span>
+<span class="fc" id="L167">            case &quot;completed&quot; -&gt; &quot;badge-sold&quot;;</span>
+<span class="fc" id="L168">            case &quot;returned&quot; -&gt; &quot;badge-removed&quot;;</span>
+<span class="fc" id="L169">            case &quot;cancelled&quot; -&gt; &quot;badge-rejected&quot;;</span>
+<span class="fc" id="L170">            default -&gt; null;</span>
+        };
+<span class="fc" id="L172">        return badge(value, style);</span>
+    }
+
+    static Label categoryBadge(String category) {
+<span class="fc bfc" id="L176" title="All 7 branches covered.">        String style = switch (category == null ? &quot;&quot; : category) {</span>
+<span class="fc" id="L177">            case &quot;Submission&quot; -&gt; &quot;badge-pending&quot;;</span>
+<span class="fc" id="L178">            case &quot;Report&quot; -&gt; &quot;badge-rejected&quot;;</span>
+<span class="fc" id="L179">            case &quot;Account&quot; -&gt; &quot;badge-sold&quot;;</span>
+<span class="fc" id="L180">            case &quot;Offer&quot; -&gt; &quot;badge-reserved&quot;;</span>
+<span class="fc" id="L181">            default -&gt; &quot;badge-live&quot;;</span>
+        };
+<span class="fc bfc" id="L183" title="All 2 branches covered.">        return badge(category == null ? &quot;System&quot; : category, style);</span>
+    }
+
+    static Region spacer() {
+<span class="fc" id="L187">        Region region = new Region();</span>
+<span class="fc" id="L188">        HBox.setHgrow(region, Priority.ALWAYS);</span>
+<span class="fc" id="L189">        return region;</span>
+    }
+
+    static HBox toolbar(Node... nodes) {
+<span class="fc" id="L193">        HBox box = new HBox(10, nodes);</span>
+<span class="fc" id="L194">        box.getStyleClass().add(&quot;toolbar&quot;);</span>
+<span class="fc" id="L195">        box.setAlignment(Pos.CENTER_LEFT);</span>
+<span class="fc" id="L196">        box.setPadding(new Insets(12));</span>
+<span class="fc" id="L197">        return box;</span>
+    }
+
+    static VBox emptyState(String heading, String message) {
+<span class="fc" id="L201">        VBox box = new VBox(8);</span>
+<span class="fc" id="L202">        box.setAlignment(Pos.CENTER);</span>
+<span class="fc" id="L203">        box.setPadding(new Insets(50, 20, 50, 20));</span>
+<span class="fc" id="L204">        box.getStyleClass().add(&quot;card&quot;);</span>
+<span class="fc" id="L205">        Label icon = new Label(&quot;◎&quot;);</span>
+<span class="fc" id="L206">        icon.setStyle(&quot;-fx-font-size: 34px; -fx-text-fill: #A68137;&quot;);</span>
+<span class="fc" id="L207">        Label title = title(heading);</span>
+<span class="fc" id="L208">        Label detail = muted(message);</span>
+<span class="fc" id="L209">        detail.setWrapText(true);</span>
+<span class="fc" id="L210">        detail.setStyle(&quot;-fx-text-alignment: center;&quot;);</span>
+<span class="fc" id="L211">        detail.setTextAlignment(javafx.scene.text.TextAlignment.CENTER);</span>
+<span class="fc" id="L212">        box.getChildren().addAll(icon, title, detail);</span>
+<span class="fc" id="L213">        return box;</span>
+    }
+
+    static ScrollPane scroll(Node content) {
+<span class="fc" id="L217">        ScrollPane scroll = new ScrollPane(content);</span>
+<span class="fc" id="L218">        scroll.setFitToWidth(true);</span>
+<span class="fc" id="L219">        scroll.setStyle(&quot;-fx-background-color: transparent;&quot;);</span>
+<span class="fc" id="L220">        return scroll;</span>
+    }
+
+    static String initials(String fullName) {
+<span class="fc bfc" id="L224" title="All 4 branches covered.">        if (fullName == null || fullName.isBlank()) return &quot;?&quot;;</span>
+<span class="fc" id="L225">        String[] parts = fullName.trim().split(&quot;\\s+&quot;);</span>
+<span class="fc bfc" id="L226" title="All 2 branches covered.">        if (parts.length == 1) {</span>
+<span class="fc" id="L227">            return parts[0].substring(0, 1).toUpperCase();</span>
+        }
+<span class="fc" id="L229">        return (parts[0].substring(0, 1) + parts[parts.length - 1].substring(0, 1)).toUpperCase();</span>
+    }
+
+    static String formatDate(LocalDate date) {
+<span class="fc bfc" id="L233" title="All 2 branches covered.">        return date == null ? &quot;—&quot; : DATE.format(date);</span>
+    }
+
+    static String formatDateTime(LocalDateTime dateTime) {
+<span class="fc bfc" id="L237" title="All 2 branches covered.">        return dateTime == null ? &quot;—&quot; : DATE_TIME.format(dateTime);</span>
+    }
+
+    /**
+     * Builds a thumbnail for a stored photo path.  Paths may be classpath resources
+     * (generated demo photos) or local files chosen by a seller/admin.
+     */
+    static Node photoThumb(String path, double width, double height) {
+<span class="fc" id="L245">        return ImageSupport.thumbnail(path, width, height);</span>
+    }
+
+    static Window window(Node node) {
+<span class="fc bfc" id="L249" title="All 4 branches covered.">        if (node != null &amp;&amp; node.getScene() != null) {</span>
+<span class="fc" id="L250">            return node.getScene().getWindow();</span>
+        }
+<span class="fc" id="L252">        Window primary = SceneManager.getPrimaryStage();</span>
+<span class="pc bpc" id="L253" title="1 of 4 branches missed.">        return primary != null &amp;&amp; primary.isShowing() ? primary : null;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

@@ -116,7 +116,10 @@ public final class PortalUi {
     public static void style(Dialog<?> dialog, Node owner) {
         Window window = owner == null || owner.getScene() == null ? SceneManager.getPrimaryStage()
                 : owner.getScene().getWindow();
-        if (window != null) dialog.initOwner(window);
+        // A disposed or hidden owner without a live scene cannot own a modal dialog.
+        if (window != null && window.isShowing() && window.getScene() != null) {
+            dialog.initOwner(window);
+        }
         dialog.getDialogPane().getStylesheets().add(
                 PortalUi.class.getResource("/css/styles.css").toExternalForm());
     }

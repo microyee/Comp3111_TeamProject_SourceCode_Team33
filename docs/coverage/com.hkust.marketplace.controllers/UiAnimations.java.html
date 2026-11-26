@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UiAnimations.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HKUST Marketplace</a> &gt; <a href="index.source.html" class="el_package">com.hkust.marketplace.controllers</a> &gt; <span class="el_source">UiAnimations.java</span></div><h1>UiAnimations.java</h1><pre class="source lang-java linenums">package com.hkust.marketplace.controllers;
+
+import javafx.animation.FadeTransition;
+import javafx.animation.ParallelTransition;
+import javafx.animation.PauseTransition;
+import javafx.animation.ScaleTransition;
+import javafx.animation.TranslateTransition;
+import javafx.geometry.Pos;
+import javafx.scene.Node;
+import javafx.scene.control.ProgressIndicator;
+import javafx.scene.layout.StackPane;
+import javafx.util.Duration;
+
+import java.util.List;
+
+/**
+ * Small, reusable UI motion helpers.  JavaFX CSS cannot animate transitions, so the
+ * common loading/fade/hover effects live here and are shared by all three portals.
+ */
+public final class UiAnimations {
+
+    private UiAnimations() {
+    }
+
+    /** Fades and gently lifts a newly shown page into place. */
+    public static void fadeIn(Node node) {
+<span class="pc bpc" id="L27" title="1 of 2 branches missed.">        if (node == null) return;</span>
+<span class="fc" id="L28">        node.setOpacity(0);</span>
+<span class="fc" id="L29">        node.setTranslateY(10);</span>
+
+<span class="fc" id="L31">        FadeTransition fade = new FadeTransition(Duration.millis(260), node);</span>
+<span class="fc" id="L32">        fade.setFromValue(0);</span>
+<span class="fc" id="L33">        fade.setToValue(1);</span>
+
+<span class="fc" id="L35">        TranslateTransition slide = new TranslateTransition(Duration.millis(260), node);</span>
+<span class="fc" id="L36">        slide.setFromY(10);</span>
+<span class="fc" id="L37">        slide.setToY(0);</span>
+
+<span class="fc" id="L39">        new ParallelTransition(fade, slide).play();</span>
+<span class="fc" id="L40">    }</span>
+
+    /**
+     * Replaces the content of a dashboard pane with a short fade/slide transition and a
+     * brief loading indicator, so screen changes feel responsive rather than abrupt.
+     */
+    public static void showPane(StackPane host, Node content) {
+<span class="pc bpc" id="L47" title="2 of 4 branches missed.">        if (host == null || content == null) return;</span>
+<span class="fc" id="L48">        host.getChildren().setAll(content);</span>
+<span class="fc" id="L49">        fadeIn(content);</span>
+<span class="fc" id="L50">        showLoadingIndicator(host);</span>
+<span class="fc" id="L51">    }</span>
+
+    private static void showLoadingIndicator(StackPane host) {
+<span class="fc" id="L54">        ProgressIndicator spinner = new ProgressIndicator();</span>
+<span class="fc" id="L55">        spinner.setMaxSize(34, 34);</span>
+<span class="fc" id="L56">        spinner.setMinSize(34, 34);</span>
+
+<span class="fc" id="L58">        StackPane overlay = new StackPane(spinner);</span>
+<span class="fc" id="L59">        StackPane.setAlignment(spinner, Pos.CENTER);</span>
+<span class="fc" id="L60">        overlay.getStyleClass().add(&quot;loading-overlay&quot;);</span>
+<span class="fc" id="L61">        overlay.setMouseTransparent(true);</span>
+<span class="fc" id="L62">        host.getChildren().add(overlay);</span>
+
+<span class="fc" id="L64">        FadeTransition fadeIn = new FadeTransition(Duration.millis(90), overlay);</span>
+<span class="fc" id="L65">        fadeIn.setFromValue(0);</span>
+<span class="fc" id="L66">        fadeIn.setToValue(1);</span>
+
+<span class="fc" id="L68">        PauseTransition hold = new PauseTransition(Duration.millis(160));</span>
+
+<span class="fc" id="L70">        FadeTransition fadeOut = new FadeTransition(Duration.millis(220), overlay);</span>
+<span class="fc" id="L71">        fadeOut.setFromValue(1);</span>
+<span class="fc" id="L72">        fadeOut.setToValue(0);</span>
+<span class="fc" id="L73">        fadeOut.setOnFinished(event -&gt; host.getChildren().remove(overlay));</span>
+
+<span class="fc" id="L75">        new javafx.animation.SequentialTransition(fadeIn, hold, fadeOut).play();</span>
+<span class="fc" id="L76">    }</span>
+
+    /** Adds a lift/scale effect while the pointer is over a card or row. */
+    public static void hoverLift(Node node) {
+<span class="pc bpc" id="L80" title="1 of 2 branches missed.">        if (node == null) return;</span>
+<span class="fc" id="L81">        node.getStyleClass().add(&quot;interactive-card&quot;);</span>
+<span class="pc" id="L82">        node.addEventHandler(javafx.scene.input.MouseEvent.MOUSE_ENTERED, event -&gt; animateScale(node, 1.015, -2));</span>
+<span class="pc" id="L83">        node.addEventHandler(javafx.scene.input.MouseEvent.MOUSE_EXITED, event -&gt; animateScale(node, 1.0, 0));</span>
+<span class="fc" id="L84">    }</span>
+
+    private static void animateScale(Node node, double scale, double translateY) {
+<span class="nc" id="L87">        ScaleTransition scaleTransition = new ScaleTransition(Duration.millis(140), node);</span>
+<span class="nc" id="L88">        scaleTransition.setToX(scale);</span>
+<span class="nc" id="L89">        scaleTransition.setToY(scale);</span>
+<span class="nc" id="L90">        TranslateTransition translate = new TranslateTransition(Duration.millis(140), node);</span>
+<span class="nc" id="L91">        translate.setToY(translateY);</span>
+<span class="nc" id="L92">        new ParallelTransition(scaleTransition, translate).play();</span>
+<span class="nc" id="L93">    }</span>
+
+    /** Fades cards in one after another (used for the browse grid). */
+    public static void staggerFadeIn(List&lt;? extends Node&gt; nodes) {
+<span class="fc bfc" id="L97" title="All 2 branches covered.">        for (int i = 0; i &lt; nodes.size(); i++) {</span>
+<span class="fc" id="L98">            Node node = nodes.get(i);</span>
+<span class="fc" id="L99">            node.setOpacity(0);</span>
+<span class="fc" id="L100">            node.setTranslateY(12);</span>
+<span class="fc" id="L101">            PauseTransition delay = new PauseTransition(Duration.millis(Math.min(i * 28, 280)));</span>
+<span class="fc" id="L102">            delay.setOnFinished(event -&gt; fadeIn(node));</span>
+<span class="fc" id="L103">            delay.play();</span>
+        }
+<span class="fc" id="L105">    }</span>
+
+    /** A subtle pulse for unread badges / important status updates. */
+    public static void pulse(Node node) {
+<span class="pc bpc" id="L109" title="1 of 2 branches missed.">        if (node == null) return;</span>
+<span class="fc" id="L110">        ScaleTransition pulse = new ScaleTransition(Duration.millis(260), node);</span>
+<span class="fc" id="L111">        pulse.setFromX(1);</span>
+<span class="fc" id="L112">        pulse.setFromY(1);</span>
+<span class="fc" id="L113">        pulse.setToX(1.14);</span>
+<span class="fc" id="L114">        pulse.setToY(1.14);</span>
+<span class="fc" id="L115">        pulse.setCycleCount(2);</span>
+<span class="fc" id="L116">        pulse.setAutoReverse(true);</span>
+<span class="fc" id="L117">        pulse.play();</span>
+<span class="fc" id="L118">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

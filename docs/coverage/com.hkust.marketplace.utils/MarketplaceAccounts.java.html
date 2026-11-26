@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>MarketplaceAccounts.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HKUST Marketplace</a> &gt; <a href="index.source.html" class="el_package">com.hkust.marketplace.utils</a> &gt; <span class="el_source">MarketplaceAccounts.java</span></div><h1>MarketplaceAccounts.java</h1><pre class="source lang-java linenums">package com.hkust.marketplace.utils;
+
+import com.hkust.marketplace.models.*;
+
+import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
+
+public final class MarketplaceAccounts {
+<span class="fc" id="L10">    public static final List&lt;String&gt; RESIDENCES = List.of(&quot;Hall 1&quot;, &quot;Hall 2&quot;, &quot;Hall 3&quot;, &quot;Hall 4&quot;,</span>
+            &quot;Hall 5&quot;, &quot;Hall 6&quot;, &quot;Hall 7&quot;, &quot;Hall 8&quot;, &quot;Hall 9&quot;, &quot;UG Hall 1&quot;, &quot;UG Hall 2&quot;, &quot;Off-campus&quot;);
+
+    private final DummyDataService data;
+
+<span class="fc" id="L15">    public MarketplaceAccounts(DummyDataService data) {</span>
+<span class="fc" id="L16">        this.data = data;</span>
+<span class="fc" id="L17">    }</span>
+
+    public User authenticate(UserRole role, String username, String password) {
+<span class="fc" id="L20">        String name = clean(username);</span>
+<span class="fc bfc" id="L21" title="All 4 branches covered.">        require(!name.isEmpty() &amp;&amp; !clean(password).isEmpty(), &quot;Enter your username and password.&quot;);</span>
+<span class="fc" id="L22">        User user = data.findUser(name);</span>
+<span class="fc bfc" id="L23" title="All 4 branches covered.">        require(user != null &amp;&amp; PasswordUtils.verify(password, user.getPasswordHash()), &quot;Incorrect username or password.&quot;);</span>
+<span class="fc bfc" id="L24" title="All 2 branches covered.">        require(user.getRole() == role, &quot;Use the portal for your account role.&quot;);</span>
+<span class="fc" id="L25">        require(available(user), &quot;This account is inactive. Contact an administrator.&quot;);</span>
+<span class="fc" id="L26">        return user;</span>
+    }
+
+    public User register(UserRole role, String username, String fullName, String password,
+                         String confirm, String residence, String bio, String meetup) {
+<span class="fc" id="L31">        synchronized (data) {</span>
+<span class="fc" id="L32">            String name = clean(username).toLowerCase(Locale.ROOT);</span>
+<span class="fc bfc" id="L33" title="All 4 branches covered.">            require(role == UserRole.BUYER || role == UserRole.SELLER, &quot;Choose Buyer or Seller.&quot;);</span>
+<span class="fc" id="L34">            require(name.matches(&quot;[a-z0-9][a-z0-9_.-]{2,31}&quot;),</span>
+                    &quot;Use 3–32 characters for your username, starting with a letter or number.&quot;);
+<span class="fc bfc" id="L36" title="All 2 branches covered.">            require(!data.usernameExists(name), &quot;This username is already taken.&quot;);</span>
+<span class="fc" id="L37">            String displayName = requiredText(fullName, &quot;Full name&quot;, 100);</span>
+<span class="fc" id="L38">            validatePassword(password, confirm);</span>
+<span class="fc bfc" id="L39" title="All 2 branches covered.">            User user = role == UserRole.BUYER ? new Buyer(name, displayName, password)</span>
+<span class="fc" id="L40">                    : new Seller(name, displayName, password);</span>
+<span class="fc" id="L41">            applyDetails(user, residence, bio, meetup);</span>
+<span class="fc" id="L42">            data.registerUser(user);</span>
+<span class="fc" id="L43">            return user;</span>
+        }
+    }
+
+    public void updateProfile(User actor, String fullName, String residence, String bio, String meetup,
+                              String current, String password, String confirm) {
+<span class="fc" id="L49">        synchronized (data) {</span>
+<span class="fc bfc" id="L50" title="All 2 branches covered.">            requireAccount(actor, actor == null ? null : actor.getRole());</span>
+<span class="fc" id="L51">            String displayName = requiredText(fullName, &quot;Full name&quot;, 100);</span>
+<span class="pc bpc" id="L52" title="1 of 6 branches missed.">            boolean changing = !clean(current).isEmpty() || !clean(password).isEmpty() || !clean(confirm).isEmpty();</span>
+<span class="fc" id="L53">            String hash = actor.getPasswordHash();</span>
+<span class="fc bfc" id="L54" title="All 2 branches covered.">            if (changing) {</span>
+<span class="fc" id="L55">                require(PasswordUtils.verify(current, hash), &quot;Current password is incorrect.&quot;);</span>
+<span class="fc" id="L56">                validatePassword(password, confirm);</span>
+<span class="fc" id="L57">                hash = PasswordUtils.hash(password);</span>
+            }
+<span class="fc" id="L59">            applyDetails(actor, residence, bio, meetup);</span>
+<span class="fc" id="L60">            actor.setFullName(displayName);</span>
+<span class="fc" id="L61">            actor.setPasswordHash(hash);</span>
+<span class="fc" id="L62">            data.updateUser(actor);</span>
+<span class="fc" id="L63">        }</span>
+<span class="fc" id="L64">    }</span>
+
+    private void applyDetails(User user, String residence, String bio, String meetup) {
+<span class="fc bfc" id="L67" title="All 2 branches covered.">        if (user.getRole() == UserRole.BUYER) {</span>
+<span class="fc bfc" id="L68" title="All 4 branches covered.">            require(residence == null || RESIDENCES.contains(residence), &quot;Select a residence from the list.&quot;);</span>
+<span class="fc" id="L69">            user.setResidenceHall(residence);</span>
+        }
+<span class="fc bfc" id="L71" title="All 2 branches covered.">        if (user.getRole() == UserRole.SELLER) {</span>
+<span class="fc" id="L72">            String description = limitedText(bio, &quot;Bio&quot;, 500);</span>
+<span class="fc bfc" id="L73" title="All 4 branches covered.">            require(meetup == null || DummyDataService.HKUST_LOCATIONS.contains(meetup), &quot;Select an HKUST meet-up location.&quot;);</span>
+<span class="fc" id="L74">            user.setBio(description);</span>
+<span class="fc" id="L75">            user.setPreferredMeetup(meetup);</span>
+        }
+<span class="fc" id="L77">    }</span>
+
+    User requireAccount(User actor, UserRole role) {
+<span class="fc bfc" id="L80" title="All 6 branches covered.">        require(available(actor) &amp;&amp; actor.getRole() == role &amp;&amp; data.findUser(actor.getUsername()) == actor,</span>
+                &quot;Sign in with an active account to continue.&quot;);
+<span class="fc" id="L82">        return actor;</span>
+    }
+
+    static boolean available(User user) {
+<span class="pc bpc" id="L86" title="1 of 6 branches missed.">        return user != null &amp;&amp; user.isActive() &amp;&amp; !user.isDeleted();</span>
+    }
+
+    static void validatePassword(String password, String confirm) {
+<span class="fc" id="L90">        String result = DummyDataService.checkPasswordStrength(password);</span>
+<span class="fc" id="L91">        require(&quot;OK&quot;.equals(result), result);</span>
+<span class="fc" id="L92">        require(Objects.equals(password, confirm), &quot;Passwords do not match.&quot;);</span>
+<span class="fc" id="L93">    }</span>
+
+    public static String requiredText(String text, String label, int max) {
+<span class="fc" id="L96">        String value = limitedText(text, label, max);</span>
+<span class="fc bfc" id="L97" title="All 2 branches covered.">        require(!value.isEmpty(), label + &quot; is required.&quot;);</span>
+<span class="fc" id="L98">        return value;</span>
+    }
+
+    static String limitedText(String text, String label, int max) {
+<span class="fc" id="L102">        String value = clean(text);</span>
+<span class="fc bfc" id="L103" title="All 2 branches covered.">        require(value.length() &lt;= max, label + &quot; must be at most &quot; + max + &quot; characters.&quot;);</span>
+<span class="fc" id="L104">        return value;</span>
+    }
+
+    public static String clean(String value) {
+<span class="fc bfc" id="L108" title="All 2 branches covered.">        return value == null ? &quot;&quot; : value.strip();</span>
+    }
+
+    static void require(boolean valid, String message) {
+<span class="fc bfc" id="L112" title="All 2 branches covered.">        if (!valid) throw new IllegalArgumentException(message);</span>
+<span class="fc" id="L113">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

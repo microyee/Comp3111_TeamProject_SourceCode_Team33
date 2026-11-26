@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AdminDealsPane.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HKUST Marketplace</a> &gt; <a href="index.source.html" class="el_package">com.hkust.marketplace.controllers.admin</a> &gt; <span class="el_source">AdminDealsPane.java</span></div><h1>AdminDealsPane.java</h1><pre class="source lang-java linenums">package com.hkust.marketplace.controllers.admin;
+
+import com.hkust.marketplace.models.Deal;
+import com.hkust.marketplace.models.ListingType;
+import com.hkust.marketplace.utils.DummyDataService;
+import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.beans.property.ReadOnlyStringWrapper;
+import javafx.collections.FXCollections;
+import javafx.geometry.Insets;
+import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.DatePicker;
+import javafx.scene.control.Label;
+import javafx.scene.control.TableCell;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableView;
+import javafx.scene.control.TextField;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.VBox;
+
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+/**
+ * Task 3.5 – All Deals Record.
+ *
+ * &lt;p&gt;Read-only oversight of every deal in the system.  Supports keyword search, deal
+ * type, status and start-date range filters.  An invalid date range (start after end)
+ * is rejected with an inline error and the previous result set is kept.&lt;/p&gt;
+ */
+final class AdminDealsPane extends VBox {
+
+<span class="fc" id="L38">    private final DummyDataService data = DummyDataService.getInstance();</span>
+
+<span class="fc" id="L40">    private final TextField searchField = new TextField();</span>
+<span class="fc" id="L41">    private final ComboBox&lt;String&gt; typeFilter = new ComboBox&lt;&gt;(</span>
+<span class="fc" id="L42">            FXCollections.observableArrayList(&quot;All Types&quot;, &quot;Sell&quot;, &quot;Lend&quot;, &quot;Giveaway&quot;));</span>
+<span class="fc" id="L43">    private final ComboBox&lt;String&gt; statusFilter = new ComboBox&lt;&gt;(</span>
+<span class="fc" id="L44">            FXCollections.observableArrayList(</span>
+                    &quot;All Statuses&quot;, &quot;Pending&quot;, &quot;Accepted&quot;, &quot;Completed&quot;, &quot;Returned&quot;, &quot;Auto-returned&quot;, &quot;Cancelled&quot;));
+<span class="fc" id="L46">    private final DatePicker fromDate = new DatePicker();</span>
+<span class="fc" id="L47">    private final DatePicker toDate = new DatePicker();</span>
+<span class="fc" id="L48">    private final Label summary = AdminUi.muted(&quot;&quot;);</span>
+<span class="fc" id="L49">    private final Label errorLabel = AdminUi.errorLabel();</span>
+<span class="fc" id="L50">    private final TableView&lt;Deal&gt; table = new TableView&lt;&gt;();</span>
+
+    AdminDealsPane(AdminDashboardController host) {
+<span class="fc" id="L53">        super(10);</span>
+<span class="fc" id="L54">        setPadding(new Insets(4));</span>
+
+<span class="fc" id="L56">        searchField.setPromptText(&quot;Search item, buyer or seller...&quot;);</span>
+<span class="fc" id="L57">        searchField.setPrefWidth(210);</span>
+<span class="fc" id="L58">        typeFilter.getSelectionModel().selectFirst();</span>
+<span class="fc" id="L59">        statusFilter.getSelectionModel().selectFirst();</span>
+<span class="fc" id="L60">        fromDate.setPromptText(&quot;From&quot;);</span>
+<span class="fc" id="L61">        fromDate.setPrefWidth(125);</span>
+<span class="fc" id="L62">        toDate.setPromptText(&quot;To&quot;);</span>
+<span class="fc" id="L63">        toDate.setPrefWidth(125);</span>
+
+<span class="fc" id="L65">        Button clear = new Button(&quot;Clear&quot;);</span>
+<span class="fc" id="L66">        clear.getStyleClass().addAll(&quot;btn-outline&quot;, &quot;btn-sm&quot;);</span>
+<span class="fc" id="L67">        clear.setOnAction(event -&gt; {</span>
+<span class="fc" id="L68">            searchField.clear();</span>
+<span class="fc" id="L69">            typeFilter.getSelectionModel().selectFirst();</span>
+<span class="fc" id="L70">            statusFilter.getSelectionModel().selectFirst();</span>
+<span class="fc" id="L71">            fromDate.setValue(null);</span>
+<span class="fc" id="L72">            toDate.setValue(null);</span>
+<span class="fc" id="L73">            refresh();</span>
+<span class="fc" id="L74">        });</span>
+
+<span class="fc" id="L76">        HBox toolbar = AdminUi.toolbar(searchField, typeFilter, statusFilter,</span>
+                fromDate, toDate, clear);
+<span class="fc" id="L78">        getChildren().addAll(toolbar, summary, errorLabel);</span>
+
+<span class="fc" id="L80">        buildTable();</span>
+<span class="fc" id="L81">        VBox.setVgrow(table, Priority.ALWAYS);</span>
+<span class="fc" id="L82">        getChildren().add(table);</span>
+
+<span class="fc" id="L84">        searchField.textProperty().addListener((observable, oldValue, newValue) -&gt; refresh());</span>
+<span class="fc" id="L85">        typeFilter.valueProperty().addListener((observable, oldValue, newValue) -&gt; refresh());</span>
+<span class="fc" id="L86">        statusFilter.valueProperty().addListener((observable, oldValue, newValue) -&gt; refresh());</span>
+<span class="fc" id="L87">        fromDate.valueProperty().addListener((observable, oldValue, newValue) -&gt; refresh());</span>
+<span class="fc" id="L88">        toDate.valueProperty().addListener((observable, oldValue, newValue) -&gt; refresh());</span>
+
+<span class="fc" id="L90">        refresh();</span>
+<span class="fc" id="L91">    }</span>
+
+    private void buildTable() {
+<span class="fc" id="L94">        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);</span>
+<span class="fc" id="L95">        table.setPlaceholder(AdminUi.emptyState(&quot;No deals found&quot;,</span>
+                &quot;Completed sales, loans and giveaways are recorded here.&quot;));
+
+<span class="fc" id="L98">        TableColumn&lt;Deal, String&gt; item = column(&quot;Item&quot;, Deal::getListingTitle, 160);</span>
+<span class="fc" id="L99">        TableColumn&lt;Deal, String&gt; buyer = column(&quot;Buyer&quot;, Deal::getBuyerUsername, 90);</span>
+<span class="fc" id="L100">        TableColumn&lt;Deal, String&gt; seller = column(&quot;Seller&quot;, Deal::getSellerUsername, 90);</span>
+<span class="fc" id="L101">        TableColumn&lt;Deal, String&gt; type = column(&quot;Type&quot;, Deal::getTypeDisplay, 90);</span>
+<span class="fc" id="L102">        TableColumn&lt;Deal, String&gt; start = column(&quot;Start Date&quot;,</span>
+<span class="fc" id="L103">                deal -&gt; AdminUi.formatDate(startDate(deal)), 105);</span>
+<span class="fc" id="L104">        TableColumn&lt;Deal, String&gt; end = column(&quot;Return / Complete&quot;,</span>
+<span class="fc" id="L105">                deal -&gt; AdminUi.formatDate(endDate(deal)), 115);</span>
+<span class="fc" id="L106">        TableColumn&lt;Deal, String&gt; offer = column(&quot;Offer / Period&quot;, this::offerDisplay, 140);</span>
+
+<span class="fc" id="L108">        TableColumn&lt;Deal, String&gt; status = new TableColumn&lt;&gt;(&quot;Status&quot;);</span>
+<span class="fc" id="L109">        status.setPrefWidth(100);</span>
+<span class="fc" id="L110">        status.setCellValueFactory(cell -&gt; new ReadOnlyStringWrapper(cell.getValue().getStatus()));</span>
+<span class="fc" id="L111">        status.setCellFactory(column -&gt; new TableCell&lt;&gt;() {</span>
+            @Override
+            protected void updateItem(String value, boolean empty) {
+<span class="fc" id="L114">                super.updateItem(value, empty);</span>
+<span class="fc" id="L115">                setText(null);</span>
+<span class="pc bpc" id="L116" title="1 of 4 branches missed.">                setGraphic(empty || value == null ? null : AdminUi.dealStatusBadge(value));</span>
+<span class="fc" id="L117">            }</span>
+        });
+
+<span class="fc" id="L120">        table.getColumns().addAll(item, buyer, seller, type, start, end, offer, status);</span>
+<span class="fc" id="L121">    }</span>
+
+    private static &lt;T&gt; TableColumn&lt;Deal, T&gt; column(
+            String title, Function&lt;Deal, T&gt; value, double width) {
+<span class="fc" id="L125">        TableColumn&lt;Deal, T&gt; column = new TableColumn&lt;&gt;(title);</span>
+<span class="fc" id="L126">        column.setCellValueFactory(cell -&gt; new ReadOnlyObjectWrapper&lt;&gt;(value.apply(cell.getValue())));</span>
+<span class="fc" id="L127">        column.setPrefWidth(width);</span>
+<span class="fc" id="L128">        return column;</span>
+    }
+
+    private void refresh() {
+<span class="fc" id="L132">        LocalDate from = fromDate.getValue();</span>
+<span class="fc" id="L133">        LocalDate to = toDate.getValue();</span>
+<span class="fc bfc" id="L134" title="All 6 branches covered.">        if (from != null &amp;&amp; to != null &amp;&amp; from.isAfter(to)) {</span>
+<span class="fc" id="L135">            AdminUi.setMessage(errorLabel,</span>
+                    &quot;Invalid date range: the start date must be on or before the end date.&quot;, true);
+<span class="fc" id="L137">            return;</span>
+        }
+<span class="fc" id="L139">        AdminUi.clear(errorLabel);</span>
+
+<span class="pc bpc" id="L141" title="1 of 2 branches missed.">        String query = searchField.getText() == null ? &quot;&quot; : searchField.getText().trim().toLowerCase();</span>
+<span class="fc" id="L142">        String wantedType = typeFilter.getValue();</span>
+<span class="fc" id="L143">        String wantedStatus = statusFilter.getValue();</span>
+
+<span class="fc" id="L145">        List&lt;Deal&gt; filtered = new ArrayList&lt;&gt;(data.getAllDeals()).stream()</span>
+<span class="fc" id="L146">                .filter(deal -&gt; matchesQuery(deal, query))</span>
+<span class="pc bpc" id="L147" title="1 of 4 branches missed.">                .filter(deal -&gt; wantedType == null || &quot;All Types&quot;.equals(wantedType)</span>
+<span class="fc bfc" id="L148" title="All 2 branches covered.">                        || deal.getTypeDisplay().equals(wantedType))</span>
+<span class="pc bpc" id="L149" title="1 of 4 branches missed.">                .filter(deal -&gt; wantedStatus == null || &quot;All Statuses&quot;.equals(wantedStatus)</span>
+<span class="fc bfc" id="L150" title="All 2 branches covered.">                        || wantedStatus.equalsIgnoreCase(deal.getStatus()))</span>
+<span class="fc" id="L151">                .filter(deal -&gt; {</span>
+<span class="fc" id="L152">                    LocalDate start = startDate(deal);</span>
+<span class="fc bfc" id="L153" title="All 6 branches covered.">                    if (start == null) return from == null &amp;&amp; to == null;</span>
+<span class="fc bfc" id="L154" title="All 4 branches covered.">                    if (from != null &amp;&amp; start.isBefore(from)) return false;</span>
+<span class="pc bpc" id="L155" title="1 of 4 branches missed.">                    if (to != null &amp;&amp; start.isAfter(to)) return false;</span>
+<span class="fc" id="L156">                    return true;</span>
+                })
+<span class="fc" id="L158">                .sorted(Comparator.comparing(Deal::getCreatedAt,</span>
+<span class="fc" id="L159">                        Comparator.nullsLast(Comparator.naturalOrder())).reversed())</span>
+<span class="fc" id="L160">                .collect(Collectors.toList());</span>
+
+<span class="fc" id="L162">        table.setItems(FXCollections.observableArrayList(filtered));</span>
+<span class="fc" id="L163">        summary.setText(filtered.size() + &quot; deal record(s) &quot;</span>
+<span class="fc bfc" id="L164" title="All 4 branches covered.">                + (from == null &amp;&amp; to == null ? &quot;&quot; : &quot;in the selected date range&quot;));</span>
+<span class="fc" id="L165">    }</span>
+
+    private boolean matchesQuery(Deal deal, String query) {
+<span class="fc bfc" id="L168" title="All 2 branches covered.">        if (query.isEmpty()) return true;</span>
+<span class="pc bpc" id="L169" title="1 of 2 branches missed.">        return contains(deal.getId(), query)</span>
+<span class="fc bfc" id="L170" title="All 2 branches covered.">                || contains(deal.getListingTitle(), query)</span>
+<span class="pc bpc" id="L171" title="1 of 2 branches missed.">                || contains(deal.getBuyerUsername(), query)</span>
+<span class="pc bpc" id="L172" title="1 of 2 branches missed.">                || contains(deal.getSellerUsername(), query);</span>
+    }
+
+    private boolean contains(String value, String query) {
+<span class="pc bpc" id="L176" title="1 of 4 branches missed.">        return value != null &amp;&amp; value.toLowerCase().contains(query);</span>
+    }
+
+    private static LocalDate startDate(Deal deal) {
+<span class="fc bfc" id="L180" title="All 2 branches covered.">        if (deal.getBorrowStart() != null) return deal.getBorrowStart();</span>
+<span class="fc bfc" id="L181" title="All 2 branches covered.">        return deal.getCreatedAt() == null ? null : deal.getCreatedAt().toLocalDate();</span>
+    }
+
+    private static LocalDate endDate(Deal deal) {
+<span class="fc bfc" id="L185" title="All 2 branches covered.">        if (deal.getCompletedAt() != null) return deal.getCompletedAt().toLocalDate();</span>
+<span class="fc bfc" id="L186" title="All 2 branches covered.">        if (deal.getBorrowEnd() != null) return deal.getBorrowEnd();</span>
+<span class="fc" id="L187">        return null;</span>
+    }
+
+    private String offerDisplay(Deal deal) {
+<span class="fc bfc" id="L191" title="All 2 branches covered.">        if (deal.getOfferPrice() != null) {</span>
+<span class="fc" id="L192">            return String.format(&quot;HK$ %.0f&quot;, deal.getOfferPrice());</span>
+        }
+<span class="pc bpc" id="L194" title="1 of 4 branches missed.">        if (deal.getBorrowStart() != null &amp;&amp; deal.getBorrowEnd() != null) {</span>
+<span class="fc" id="L195">            java.time.format.DateTimeFormatter shortDate =</span>
+<span class="fc" id="L196">                    java.time.format.DateTimeFormatter.ofPattern(&quot;dd MMM&quot;);</span>
+<span class="fc" id="L197">            return shortDate.format(deal.getBorrowStart()) + &quot; – &quot;</span>
+<span class="fc" id="L198">                    + shortDate.format(deal.getBorrowEnd());</span>
+        }
+<span class="fc bfc" id="L200" title="All 2 branches covered.">        if (deal.getDealType() == ListingType.GIVEAWAY) {</span>
+<span class="fc" id="L201">            return &quot;Claim&quot;;</span>
+        }
+<span class="fc" id="L203">        return &quot;—&quot;;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

@@ -43,10 +43,16 @@ class MarketplaceNavigationTest {
         assumeTrue(!os.contains("linux") || System.getenv("DISPLAY") != null,
                 "JavaFX smoke tests require a display. On Linux, use xvfb-run.");
         CountDownLatch ready = new CountDownLatch(1);
-        Platform.startup(() -> {
+        try {
+            Platform.startup(() -> {
+                Platform.setImplicitExit(false);
+                ready.countDown();
+            });
+        } catch (IllegalStateException alreadyStarted) {
+            // Another test class started the toolkit first.
             Platform.setImplicitExit(false);
-            ready.countDown();
-        });
+            return;
+        }
         assertTrue(ready.await(10, TimeUnit.SECONDS));
     }
 

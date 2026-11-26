@@ -9,6 +9,11 @@ chats, deals, ratings and notifications during the current application session. 
 
 ## Project documentation
 
+- [Unit test and coverage report](TESTING.md) — 64 tests, 100% pass, **79.65% branch coverage**
+- [JaCoCo coverage report (HTML)](docs/coverage/index.html)
+- [JavaDoc (HTML)](docs/javadoc/index.html)
+- [Application screenshots with sample inputs/outputs](docs/screenshots/README.md)
+- [Supplementary notes](docs/SUPPLEMENTARY_NOTES.md) — architecture, WoW factors, algorithms, assumptions and limitations
 - [Activity 1 — revised UML and use-case specification](docs/Comp3111_TeamProject_Activity_1_Final_Revised.pdf)
 - [Activity 2 — documentation and source code](docs/COMP3111_Team33_Activity_2_Documentation_and_Source_Code.pdf)
 - [Sprint 2 Project Management Pack — PDF](COMP3111_Team33_Sprint2_Project_Management.pdf)
@@ -18,11 +23,15 @@ The Activity 1 revision replaces the two diagrams with implementation-aligned ve
 and adds UC-BU-10 (Report Listing), UC-BU-11 (Manage Favourites & Following) and
 UC-AD-9 (Manage Reports). Activity 2 documents the architecture, security rules,
 feature coverage, test evidence, source excerpts and a complete 51-file source index.
-The Word pack contains four Scrum meeting minutes, the Gantt chart, the Sprint 2
+The updated Word pack contains four Scrum meeting minutes, the Gantt chart, the Sprint 2
 backlog, the burndown chart, a representative Git commit log, outcome/verification
-evidence and UI screenshots; its tables are native and editable.
+evidence, and two UI-evidence pages covering the buyer, seller and admin screens
+(13 pages); its tables are native and editable.
 
-Verification snapshot: **33 automated tests, 0 failures, 0 errors** (`./mvnw test`).
+Verification snapshot: **64 automated tests, 0 failures, 0 errors** (`./mvnw clean verify`),
+with **79.65% branch coverage** (1,742 / 2,187 branches) and **90.59% line coverage**.
+See [`TESTING.md`](TESTING.md) and the committed
+[JaCoCo report](docs/coverage/index.html).
 
 ## Prerequisites
 
@@ -269,9 +278,19 @@ Educational use — HKUST COMP project skeleton.
 ## Tests
 
 Run `mvnw.cmd clean verify` on Windows or `./mvnw clean verify` on macOS and Linux.
-JaCoCo writes the full branch-coverage report to `target/site/jacoco/index.html`.
-JavaFX navigation tests require a display. On a headless Linux machine, use
-`xvfb-run -a ./mvnw clean verify` to include them.
+JaCoCo writes the full branch-coverage report to `target/site/jacoco/index.html`;
+the committed snapshot is [`docs/coverage/index.html`](docs/coverage/index.html).
+The Surefire reports and the test-by-test summary are in
+[`TESTING.md`](TESTING.md). JavaFX UI tests require a display. On a headless Linux
+machine, use `xvfb-run -a ./mvnw clean verify` to include them; without a display
+they are skipped while the domain tests still run.
+
+The generated JavaDoc is committed at [`docs/javadoc/index.html`](docs/javadoc/index.html).
+Regenerate it with:
+
+```powershell
+.\mvnw.cmd -DskipTests javadoc:javadoc
+```
 
 ## Try an end-to-end transaction
 

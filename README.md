@@ -16,8 +16,9 @@ chats, deals, ratings and notifications during the current application session. 
 - [Supplementary notes](docs/SUPPLEMENTARY_NOTES.md) — architecture, WoW factors, algorithms, assumptions and limitations
 - [Activity 1 — revised UML and use-case specification](docs/Comp3111_TeamProject_Activity_1_Final_Revised.pdf)
 - [Activity 2 — documentation and source code](docs/COMP3111_Team33_Activity_2_Documentation_and_Source_Code.pdf)
-- [Sprint 2 Project Management Pack — PDF](COMP3111_Team33_Sprint2_Project_Management.pdf)
-- [Sprint 2 Project Management Pack — updated editable Word version](COMP3111_Team33_Sprint2_Project_Management_Updated.docx)
+- [Sprint 2 Project Management Pack — final PDF](docs/COMP3111_Team33_Sprint2_Project_Management_Final.pdf)
+- [Final submission evidence — PDF](docs/COMP3111_Team33_Final_Submission_Evidence.pdf)
+- [Final submission evidence — editable Word version](COMP3111_Team33_Sprint2_Project_Management_Updated.docx)
 
 The Activity 1 revision replaces the two diagrams with implementation-aligned versions
 and adds UC-BU-10 (Report Listing), UC-BU-11 (Manage Favourites & Following) and

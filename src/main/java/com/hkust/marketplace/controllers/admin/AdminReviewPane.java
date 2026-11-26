@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Task 3.2 – Listing Review & Approval.
+ * Task 3.2 – Listing Review &amp; Approval.
  *
  * <p>Shows every submission with status PENDING_REVIEW, including seller identity,
  * category, type, meet-up location, submitted date, status and photos.  Approving

@@ -249,6 +249,7 @@ final class AdminUi {
         if (node != null && node.getScene() != null) {
             return node.getScene().getWindow();
         }
-        return SceneManager.getPrimaryStage();
+        Window primary = SceneManager.getPrimaryStage();
+        return primary != null && primary.isShowing() ? primary : null;
     }
 }

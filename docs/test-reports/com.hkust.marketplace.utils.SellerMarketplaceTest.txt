@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.hkust.marketplace.utils.SellerMarketplaceTest
+-------------------------------------------------------------------------------
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.851 s -- in com.hkust.marketplace.utils.SellerMarketplaceTest

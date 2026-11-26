@@ -1,0 +1,378 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SellerDashboardController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HKUST Marketplace</a> &gt; <a href="index.source.html" class="el_package">com.hkust.marketplace.controllers.seller</a> &gt; <span class="el_source">SellerDashboardController.java</span></div><h1>SellerDashboardController.java</h1><pre class="source lang-java linenums">package com.hkust.marketplace.controllers.seller;
+
+import com.hkust.marketplace.MarketplaceApp;
+import com.hkust.marketplace.controllers.PhotoViewer;
+import com.hkust.marketplace.controllers.UiAnimations;
+import com.hkust.marketplace.models.*;
+import com.hkust.marketplace.utils.*;
+import javafx.application.Platform;
+import javafx.fxml.FXML;
+import javafx.geometry.Pos;
+import javafx.scene.Node;
+import javafx.scene.chart.*;
+import javafx.scene.control.*;
+import javafx.scene.layout.*;
+
+import java.util.Comparator;
+import java.util.List;
+import java.util.Locale;
+
+import static com.hkust.marketplace.controllers.PortalUi.*;
+
+<span class="fc" id="L22">public class SellerDashboardController {</span>
+    @FXML private StackPane contentPane;
+    @FXML private Label pageTitle, welcomeLabel, unreadLabel;
+    @FXML private Button btnListings, btnCreate, btnRequests, btnChat, btnStats, btnReviews, btnNotifications, btnProfile;
+
+<span class="fc" id="L27">    private final DummyDataService data = DummyDataService.getInstance();</span>
+<span class="fc" id="L28">    private final MarketplaceAccounts accounts = new MarketplaceAccounts(data);</span>
+<span class="fc" id="L29">    private final MarketplaceActivity activity = data.activity();</span>
+<span class="fc" id="L30">    private final SellerMarketplace marketplace = new SellerMarketplace(data);</span>
+    private User seller;
+    private Button active;
+<span class="pc" id="L33">    private Runnable onLoanUpdate = () -&gt; {};</span>
+
+    @FXML
+    private void initialize() {
+<span class="pc bpc" id="L37" title="2 of 4 branches missed.">        if (!SessionManager.isSessionValid() || !SessionManager.isSeller()) {</span>
+<span class="nc" id="L38">            SessionManager.logout();</span>
+<span class="nc" id="L39">            Platform.runLater(SceneManager::showSellerLogin);</span>
+<span class="nc" id="L40">            return;</span>
+        }
+<span class="fc" id="L42">        seller = SessionManager.getCurrentUser();</span>
+<span class="fc" id="L43">        welcome();</span>
+<span class="fc" id="L44">        contentPane.addEventHandler(MarketplaceApp.LOANS_UPDATED, event -&gt; {</span>
+<span class="nc" id="L45">            badge();</span>
+<span class="nc" id="L46">            onLoanUpdate.run();</span>
+<span class="nc" id="L47">        });</span>
+<span class="fc" id="L48">        showMyListings();</span>
+<span class="fc" id="L49">    }</span>
+
+    private void welcome() {
+<span class="fc" id="L52">        welcomeLabel.setText(&quot;Seller: &quot; + seller.getFullName());</span>
+<span class="fc" id="L53">    }</span>
+
+    private void badge() {
+<span class="fc" id="L56">        int count = data.getUnreadCount(seller.getUsername());</span>
+<span class="fc" id="L57">        unreadLabel.setText(count + &quot; unread&quot;);</span>
+<span class="fc bfc" id="L58" title="All 2 branches covered.">        unreadLabel.getStyleClass().setAll(&quot;badge&quot;, count == 0 ? &quot;badge-live&quot; : &quot;badge-pending&quot;);</span>
+<span class="fc bfc" id="L59" title="All 2 branches covered.">        if (count &gt; 0) UiAnimations.pulse(unreadLabel);</span>
+<span class="fc" id="L60">    }</span>
+
+    private void show(Button button, String title, Node page) {
+<span class="fc bfc" id="L63" title="All 2 branches covered.">        if (active != null) active.getStyleClass().remove(&quot;sidebar-btn-active&quot;);</span>
+<span class="fc" id="L64">        button.getStyleClass().remove(&quot;sidebar-btn-active&quot;);</span>
+<span class="fc" id="L65">        button.getStyleClass().add(&quot;sidebar-btn-active&quot;);</span>
+<span class="fc" id="L66">        active = button;</span>
+<span class="fc" id="L67">        pageTitle.setText(title);</span>
+<span class="fc" id="L68">        UiAnimations.showPane(contentPane, page);</span>
+<span class="pc" id="L69">        onLoanUpdate = () -&gt; {};</span>
+<span class="fc" id="L70">        badge();</span>
+<span class="fc" id="L71">    }</span>
+
+    @FXML
+<span class="fc" id="L74">    private void showMyListings() { showMyListings(null); }</span>
+
+    private void showMyListings(String highlight) {
+<span class="fc" id="L77">        var status = choice(&quot;All statuses&quot;, List.of(ListingStatus.values()));</span>
+<span class="fc" id="L78">        TextField query = field(&quot;Search my listings&quot;);</span>
+<span class="fc" id="L79">        VBox rows = new VBox(10);</span>
+<span class="fc" id="L80">        Runnable render = () -&gt; {</span>
+<span class="fc" id="L81">            rows.getChildren().clear();</span>
+<span class="fc" id="L82">            String text = query.getText().strip().toLowerCase(Locale.ROOT);</span>
+<span class="fc bfc" id="L83" title="All 2 branches covered.">            for (Listing listing : data.getListingsBySeller(seller.getUsername())) {</span>
+<span class="pc bpc" id="L84" title="1 of 2 branches missed.">                if (!MarketplaceCatalog.contains(listing.getTitle(), text)</span>
+<span class="pc bpc" id="L85" title="3 of 4 branches missed.">                        || status.getValue() != null &amp;&amp; status.getValue() != listing.getStatus()) continue;</span>
+<span class="pc bpc" id="L86" title="1 of 4 branches missed.">                if (listing.getStatus() == ListingStatus.REMOVED &amp;&amp; seller.getUsername().equals(listing.getRemovedBy())</span>
+<span class="pc bpc" id="L87" title="2 of 4 branches missed.">                        &amp;&amp; status.getValue() != ListingStatus.REMOVED &amp;&amp; !listing.getId().equals(highlight)) continue;</span>
+<span class="fc" id="L88">                rows.getChildren().add(listingRow(listing, listing.getId().equals(highlight), this::showMyListings));</span>
+<span class="fc" id="L89">            }</span>
+<span class="fc bfc" id="L90" title="All 2 branches covered.">            if (rows.getChildren().isEmpty()) rows.getChildren().add(label(&quot;No listings match these filters.&quot;, &quot;muted&quot;));</span>
+<span class="fc" id="L91">        };</span>
+<span class="pc" id="L92">        query.textProperty().addListener((observable, old, value) -&gt; render.run());</span>
+<span class="pc" id="L93">        status.setOnAction(event -&gt; render.run());</span>
+<span class="fc" id="L94">        HBox toolbar = new HBox(8, query, status, button(&quot;Clear filters&quot;, &quot;btn-outline&quot;, () -&gt; {</span>
+<span class="nc" id="L95">            query.clear();</span>
+<span class="nc" id="L96">            status.setValue(null);</span>
+<span class="pc" id="L97">        }), button(&quot;Create listing&quot;, &quot;btn-primary&quot;, this::showCreateListing));</span>
+<span class="fc" id="L98">        toolbar.getStyleClass().add(&quot;toolbar&quot;);</span>
+<span class="fc" id="L99">        ScrollPane list = scroll(rows);</span>
+<span class="fc" id="L100">        VBox.setVgrow(list, Priority.ALWAYS);</span>
+<span class="fc" id="L101">        show(btnListings, &quot;My Listings&quot;, new VBox(12, toolbar, list));</span>
+<span class="fc" id="L102">        onLoanUpdate = render;</span>
+<span class="fc" id="L103">        render.run();</span>
+<span class="fc" id="L104">    }</span>
+
+    private Node listingRow(Listing listing, boolean highlight, Runnable refresh) {
+<span class="fc" id="L107">        String id = listing.getId();</span>
+<span class="fc" id="L108">        VBox info = new VBox(7, label(listing.getTitle(), &quot;section-title&quot;),</span>
+<span class="fc" id="L109">                label(listing.getTypeDisplay() + &quot; · &quot; + listing.getPriceDisplay() + &quot; · &quot; + listing.getCategory()</span>
+<span class="fc" id="L110">                        + &quot; · &quot; + listing.getCondition(), &quot;label&quot;),</span>
+<span class="fc" id="L111">                label(listing.getStatus() + &quot; · &quot; + listing.getMeetupLocation() + &quot; · &quot; + listing.getViewCount() + &quot; views&quot;, &quot;muted&quot;));</span>
+<span class="fc" id="L112">        HBox.setHgrow(info, Priority.ALWAYS);</span>
+<span class="fc bfc" id="L113" title="All 2 branches covered.">        if (listing.getRejectionReason() != null) info.getChildren().add(label(&quot;Review reason: &quot; + listing.getRejectionReason(), &quot;error-text&quot;));</span>
+<span class="pc bpc" id="L114" title="1 of 2 branches missed.">        if (listing.getRemovalReason() != null) info.getChildren().add(label(&quot;Removal reason: &quot; + listing.getRemovalReason(), &quot;muted&quot;));</span>
+
+<span class="pc" id="L116">        HBox actions = new HBox(8, button(&quot;Incoming requests&quot;, &quot;btn-outline&quot;, () -&gt; showRequests(id, null)));</span>
+<span class="fc bfc" id="L117" title="All 2 branches covered.">        if (marketplace.canEdit(seller, id)) {</span>
+<span class="fc" id="L118">            actions.getChildren().addAll(button(&quot;Edit&quot;, &quot;btn-outline&quot;, () -&gt; editListing(listing)),</span>
+<span class="fc" id="L119">                    button(&quot;Delete&quot;, &quot;btn-danger&quot;, () -&gt; {</span>
+<span class="pc bpc" id="L120" title="1 of 2 branches missed.">                        if (confirm(contentPane, &quot;Delete listing?&quot;, listing.getTitle())) {</span>
+<span class="fc" id="L121">                            marketplace.remove(seller, id);</span>
+<span class="fc" id="L122">                            refresh.run();</span>
+                        }
+<span class="fc" id="L124">                    }));</span>
+        }
+<span class="pc bpc" id="L126" title="1 of 2 branches missed.">        if (marketplace.canMarkSold(seller, id)) {</span>
+<span class="nc" id="L127">            actions.getChildren().add(button(&quot;Mark as sold&quot;, &quot;btn-success&quot;, () -&gt; {</span>
+<span class="nc bnc" id="L128" title="All 2 branches missed.">                if (confirm(contentPane, &quot;Mark as sold?&quot;, listing.getTitle())) {</span>
+<span class="nc" id="L129">                    marketplace.markSold(seller, id);</span>
+<span class="nc" id="L130">                    refresh.run();</span>
+                }
+<span class="nc" id="L132">            }));</span>
+        }
+<span class="fc" id="L134">        info.getChildren().add(actions);</span>
+
+<span class="fc" id="L136">        Node thumb = ImageSupport.firstPhoto(listing, 132, 96);</span>
+<span class="fc" id="L137">        thumb.setOnMouseClicked(event -&gt; {</span>
+<span class="nc" id="L138">            PhotoViewer.show(thumb, listing.getPhotoPaths(), 0, listing.getTitle());</span>
+<span class="nc" id="L139">            event.consume();</span>
+<span class="nc" id="L140">        });</span>
+<span class="fc" id="L141">        HBox row = new HBox(14, thumb, info);</span>
+<span class="fc" id="L142">        row.getStyleClass().add(&quot;card&quot;);</span>
+<span class="fc" id="L143">        row.setAlignment(Pos.CENTER_LEFT);</span>
+<span class="pc bpc" id="L144" title="1 of 2 branches missed.">        if (highlight) row.getStyleClass().add(&quot;notif-unread&quot;);</span>
+<span class="fc" id="L145">        UiAnimations.hoverLift(row);</span>
+<span class="fc" id="L146">        row.setOnMouseClicked(event -&gt; {</span>
+<span class="nc bnc" id="L147" title="All 2 branches missed.">            if (PhotoViewer.isInteractiveTarget(event.getTarget())) return;</span>
+<span class="nc" id="L148">            Platform.runLater(() -&gt; {</span>
+<span class="nc bnc" id="L149" title="All 2 branches missed.">                if (marketplace.canEdit(seller, id)) {</span>
+<span class="nc" id="L150">                    editListing(listing);</span>
+                } else {
+<span class="nc" id="L152">                    showListingInfo(listing);</span>
+                }
+<span class="nc" id="L154">            });</span>
+<span class="nc" id="L155">        });</span>
+<span class="fc" id="L156">        return row;</span>
+    }
+
+    private void showListingInfo(Listing listing) {
+<span class="nc" id="L160">        Alert alert = new Alert(Alert.AlertType.INFORMATION);</span>
+<span class="nc" id="L161">        style(alert, contentPane);</span>
+<span class="nc" id="L162">        alert.setTitle(listing.getTitle());</span>
+<span class="nc" id="L163">        alert.setHeaderText(listing.getStatus().name().replace('_', ' '));</span>
+<span class="nc" id="L164">        alert.setContentText(&quot;This listing can no longer be edited while it is &quot;</span>
+<span class="nc" id="L165">                + listing.getStatus().name().replace('_', ' ').toLowerCase() + &quot;.&quot;</span>
+<span class="nc bnc" id="L166" title="All 2 branches missed.">                + (listing.getRemovalReason() == null ? &quot;&quot; : &quot;\nReason: &quot; + listing.getRemovalReason()));</span>
+<span class="nc" id="L167">        alert.showAndWait();</span>
+<span class="nc" id="L168">    }</span>
+
+    @FXML
+    private void showCreateListing() {
+<span class="fc" id="L172">        show(btnCreate, &quot;Create Listing&quot;, SellerListingForm.build(seller, null, marketplace, this::showMyListings));</span>
+<span class="fc" id="L173">    }</span>
+
+    private void editListing(Listing listing) {
+<span class="pc bpc" id="L176" title="1 of 2 branches missed.">        if (!marketplace.canEdit(seller, listing.getId())) throw new IllegalArgumentException(&quot;This listing can no longer be edited.&quot;);</span>
+<span class="fc" id="L177">        show(btnListings, &quot;Edit Listing&quot;, SellerListingForm.build(seller, listing, marketplace, this::showMyListings));</span>
+<span class="fc" id="L178">    }</span>
+
+    @FXML
+<span class="fc" id="L181">    private void showRequests() { showRequests(null, null); }</span>
+
+    private void showRequests(String listingId, String requestId) {
+<span class="fc" id="L184">        VBox rows = new VBox(10);</span>
+<span class="fc" id="L185">        CheckBox activeOnly = new CheckBox(&quot;Open requests only&quot;);</span>
+<span class="fc bfc" id="L186" title="All 2 branches covered.">        activeOnly.setSelected(requestId == null);</span>
+<span class="fc" id="L187">        Runnable render = () -&gt; {</span>
+<span class="fc" id="L188">            rows.getChildren().clear();</span>
+<span class="fc" id="L189">            List&lt;Request&gt; requests = data.getRequestsForSeller(seller.getUsername()).stream()</span>
+<span class="pc bpc" id="L190" title="3 of 4 branches missed.">                    .filter(r -&gt; listingId == null || listingId.equals(r.getListingId()))</span>
+<span class="pc bpc" id="L191" title="1 of 4 branches missed.">                    .filter(r -&gt; !activeOnly.isSelected() || r.isActive())</span>
+<span class="fc" id="L192">                    .sorted(Comparator.comparing(Request::getCreatedAt).reversed()).toList();</span>
+<span class="fc bfc" id="L193" title="All 2 branches covered.">            for (Request request : requests) {</span>
+<span class="fc" id="L194">                VBox row = requestRow(request, () -&gt; showRequests(listingId, request.getId()));</span>
+<span class="fc bfc" id="L195" title="All 2 branches covered.">                if (request.getId().equals(requestId)) row.getStyleClass().add(&quot;notif-unread&quot;);</span>
+<span class="fc" id="L196">                rows.getChildren().add(row);</span>
+<span class="fc" id="L197">            }</span>
+<span class="pc bpc" id="L198" title="1 of 2 branches missed.">            if (rows.getChildren().isEmpty()) rows.getChildren().add(label(&quot;No matching requests.&quot;, &quot;muted&quot;));</span>
+<span class="fc" id="L199">        };</span>
+<span class="fc" id="L200">        HBox toolbar = new HBox(8, activeOnly);</span>
+<span class="pc bpc" id="L201" title="1 of 2 branches missed.">        if (listingId != null) toolbar.getChildren().add(button(&quot;Show all listings&quot;, &quot;btn-outline&quot;, this::showRequests));</span>
+<span class="fc" id="L202">        toolbar.getStyleClass().add(&quot;toolbar&quot;);</span>
+<span class="pc" id="L203">        activeOnly.setOnAction(event -&gt; render.run());</span>
+<span class="fc" id="L204">        ScrollPane list = scroll(rows);</span>
+<span class="fc" id="L205">        VBox.setVgrow(list, Priority.ALWAYS);</span>
+<span class="fc" id="L206">        show(btnRequests, &quot;Incoming Requests&quot;, new VBox(12, toolbar, list));</span>
+<span class="fc" id="L207">        onLoanUpdate = render;</span>
+<span class="fc" id="L208">        render.run();</span>
+<span class="fc" id="L209">    }</span>
+
+    private VBox requestRow(Request request, Runnable refresh) {
+<span class="fc" id="L212">        var terms = MarketplaceActivity.proposed(request);</span>
+<span class="fc" id="L213">        VBox row = card(label(request.getListingTitle() + &quot; · &quot; + request.getStatus(), &quot;section-title&quot;),</span>
+<span class="fc" id="L214">                label(&quot;@&quot; + request.getBuyerUsername() + &quot; · &quot; + request.getTypeDisplay() + &quot; · &quot; + time(request.getCreatedAt()), &quot;muted&quot;),</span>
+<span class="fc" id="L215">                label(terms.display(request.getType()), &quot;label&quot;));</span>
+<span class="fc bfc" id="L216" title="All 2 branches covered.">        if (&quot;Countered&quot;.equals(request.getStatus())) {</span>
+<span class="fc" id="L217">            row.getChildren().add(label(&quot;Counteroffer: &quot; + MarketplaceActivity.counterTerms(request).display(request.getType()), &quot;label&quot;));</span>
+        }
+<span class="fc" id="L219">        Deal deal = data.findDealForRequest(request.getId());</span>
+<span class="pc bpc" id="L220" title="3 of 4 branches missed.">        if (deal != null &amp;&amp; !&quot;Pending&quot;.equals(deal.getStatus())) {</span>
+<span class="nc" id="L221">            row.getChildren().add(label(&quot;Deal: &quot; + deal.getStatus(), &quot;muted&quot;));</span>
+        }
+<span class="fc" id="L223">        HBox actions = new HBox(8, button(&quot;Chat&quot;, &quot;btn-outline&quot;,</span>
+<span class="nc" id="L224">                () -&gt; showChat(activity.chatForRequest(seller, request.getId()))));</span>
+<span class="fc bfc" id="L225" title="All 2 branches covered.">        if (&quot;Pending&quot;.equals(request.getStatus())) {</span>
+<span class="fc" id="L226">            actions.getChildren().addAll(button(&quot;Accept&quot;, &quot;btn-primary&quot;,</span>
+<span class="nc" id="L227">                            () -&gt; respond(request, MarketplaceActivity.Decision.ACCEPT, refresh)),</span>
+<span class="pc" id="L228">                    button(&quot;Decline&quot;, &quot;btn-outline&quot;, () -&gt; respond(request, MarketplaceActivity.Decision.DECLINE, refresh)));</span>
+<span class="pc bpc" id="L229" title="1 of 2 branches missed.">            if (request.getType() != ListingType.GIVEAWAY) {</span>
+<span class="fc" id="L230">                actions.getChildren().add(button(&quot;Counter&quot;, &quot;btn-outline&quot;, () -&gt; termsForm(contentPane, request.getType(),</span>
+                        terms, &quot;Send counteroffer&quot;, agreement -&gt; {
+<span class="fc" id="L232">                            activity.respond(seller, request.getId(), MarketplaceActivity.Decision.COUNTER, agreement);</span>
+<span class="fc" id="L233">                            refresh.run();</span>
+<span class="fc" id="L234">                        })));</span>
+            }
+        }
+<span class="fc" id="L237">        row.getChildren().add(actions);</span>
+<span class="fc" id="L238">        UiAnimations.hoverLift(row);</span>
+<span class="fc" id="L239">        return row;</span>
+    }
+
+    private void respond(Request request, MarketplaceActivity.Decision decision, Runnable refresh) {
+<span class="nc bnc" id="L243" title="All 2 branches missed.">        String title = decision == MarketplaceActivity.Decision.ACCEPT ? &quot;Accept request?&quot; : &quot;Decline request?&quot;;</span>
+<span class="nc bnc" id="L244" title="All 2 branches missed.">        if (confirm(contentPane, title, MarketplaceActivity.proposed(request).display(request.getType()))) {</span>
+<span class="nc" id="L245">            activity.respond(seller, request.getId(), decision, null);</span>
+<span class="nc" id="L246">            refresh.run();</span>
+        }
+<span class="nc" id="L248">    }</span>
+
+    @FXML
+<span class="fc" id="L251">    private void showMessages() { showChat(null); }</span>
+
+    private void showChat(Chat selected) {
+<span class="fc" id="L254">        show(btnChat, &quot;Messages&quot;, chat(seller, activity, selected, null));</span>
+<span class="fc" id="L255">    }</span>
+
+    @FXML
+    private void showStats() {
+<span class="fc" id="L259">        var stats = marketplace.stats(seller);</span>
+<span class="fc" id="L260">        FlowPane metrics = new FlowPane(10, 10,</span>
+<span class="fc" id="L261">                metric(&quot;Listing views&quot;, stats.views()), metric(&quot;Offers&quot;, stats.offers()),</span>
+<span class="fc" id="L262">                metric(&quot;Loan requests&quot;, stats.loanRequests()), metric(&quot;Giveaway claims&quot;, stats.claims()),</span>
+<span class="fc" id="L263">                metric(&quot;Completed deals&quot;, stats.completedSales() + stats.returnedLoans() + stats.completedGiveaways()),</span>
+<span class="pc bpc" id="L264" title="1 of 2 branches missed.">                metric(&quot;Average rating&quot;, stats.ratingCount() == 0 ? &quot;No ratings yet&quot; : String.format(&quot;%.1f / 5&quot;, stats.averageRating())));</span>
+<span class="fc" id="L265">        VBox rows = new VBox(12, metrics, viewsChart(stats), dealChart(stats));</span>
+<span class="pc bpc" id="L266" title="1 of 2 branches missed.">        if (!stats.listings().isEmpty()) {</span>
+<span class="fc" id="L267">            rows.getChildren().add(label(&quot;Activity by listing&quot;, &quot;section-title&quot;));</span>
+<span class="fc bfc" id="L268" title="All 2 branches covered.">            for (var item : stats.listings()) {</span>
+<span class="fc" id="L269">                rows.getChildren().add(card(label(item.title(), &quot;section-title&quot;),</span>
+<span class="fc" id="L270">                        label(item.views() + &quot; views · &quot; + item.offers() + &quot; offers · &quot; + item.loanRequests()</span>
+<span class="fc" id="L271">                                + &quot; loan requests · &quot; + item.claims() + &quot; claims · &quot; + item.completedDeals() + &quot; completed&quot;, &quot;muted&quot;)));</span>
+<span class="fc" id="L272">            }</span>
+        }
+<span class="fc" id="L274">        show(btnStats, &quot;Seller Stats&quot;, scroll(rows));</span>
+<span class="fc" id="L275">        onLoanUpdate = this::showStats;</span>
+<span class="fc" id="L276">    }</span>
+
+    private Node metric(String summary, Object value) {
+<span class="fc" id="L279">        VBox metric = card(label(value.toString(), &quot;section-title&quot;), label(summary, &quot;muted&quot;));</span>
+<span class="fc" id="L280">        metric.setMinWidth(126);</span>
+<span class="fc" id="L281">        return metric;</span>
+    }
+
+    private Node viewsChart(SellerMarketplace.Stats stats) {
+<span class="pc bpc" id="L285" title="1 of 2 branches missed.">        if (stats.views() == 0) return card(label(&quot;No listing views yet.&quot;, &quot;muted&quot;));</span>
+<span class="fc" id="L286">        var axis = new CategoryAxis();</span>
+<span class="fc" id="L287">        axis.setLabel(&quot;Listing&quot;);</span>
+<span class="fc" id="L288">        var values = new NumberAxis();</span>
+<span class="fc" id="L289">        values.setLabel(&quot;Views&quot;);</span>
+<span class="fc" id="L290">        var chart = new BarChart&lt;String, Number&gt;(axis, values);</span>
+<span class="fc" id="L291">        chart.setAnimated(false);</span>
+<span class="fc" id="L292">        chart.setLegendVisible(false);</span>
+<span class="fc" id="L293">        chart.setTitle(&quot;Views by listing&quot;);</span>
+<span class="fc" id="L294">        chart.setPrefHeight(280);</span>
+<span class="fc" id="L295">        var series = new XYChart.Series&lt;String, Number&gt;();</span>
+<span class="fc bfc" id="L296" title="All 2 branches covered.">        for (var item : stats.listings()) series.getData().add(new XYChart.Data&lt;&gt;(item.id(), item.views()));</span>
+<span class="fc" id="L297">        chart.getData().add(series);</span>
+<span class="fc" id="L298">        return card(chart);</span>
+    }
+
+    private Node dealChart(SellerMarketplace.Stats stats) {
+<span class="pc bpc" id="L302" title="1 of 2 branches missed.">        if (stats.completedSales() + stats.returnedLoans() + stats.completedGiveaways() == 0) {</span>
+<span class="fc" id="L303">            return card(label(&quot;No completed deals yet.&quot;, &quot;muted&quot;));</span>
+        }
+<span class="nc" id="L305">        PieChart chart = new PieChart();</span>
+<span class="nc" id="L306">        chart.setAnimated(false);</span>
+<span class="nc" id="L307">        chart.setTitle(&quot;Completed deals by type&quot;);</span>
+<span class="nc" id="L308">        chart.setPrefHeight(280);</span>
+<span class="nc" id="L309">        chart.getData().addAll(new PieChart.Data(&quot;Sales (&quot; + stats.completedSales() + &quot;)&quot;, stats.completedSales()),</span>
+<span class="nc" id="L310">                new PieChart.Data(&quot;Loans (&quot; + stats.returnedLoans() + &quot;)&quot;, stats.returnedLoans()),</span>
+<span class="nc" id="L311">                new PieChart.Data(&quot;Giveaways (&quot; + stats.completedGiveaways() + &quot;)&quot;, stats.completedGiveaways()));</span>
+<span class="nc" id="L312">        return card(chart);</span>
+    }
+
+    @FXML
+<span class="fc" id="L316">    private void showReviews() { showReviews(null); }</span>
+
+    private void showReviews(String highlight) {
+<span class="fc" id="L319">        var reviews = data.getAllRatingsForSeller(seller.getUsername());</span>
+<span class="fc" id="L320">        int visible = data.getPublicRatingCount(seller.getUsername());</span>
+<span class="fc bfc" id="L321" title="All 2 branches covered.">        String summary = visible == 0 ? &quot;No public ratings yet&quot; : String.format(&quot;%.1f / 5 · %d public reviews&quot;,</span>
+<span class="fc" id="L322">                data.getPublicAverageRating(seller.getUsername()), visible);</span>
+<span class="fc" id="L323">        VBox rows = new VBox(10, label(summary, &quot;section-title&quot;));</span>
+<span class="fc bfc" id="L324" title="All 2 branches covered.">        if (reviews.isEmpty()) rows.getChildren().add(label(&quot;No feedback yet.&quot;, &quot;muted&quot;));</span>
+<span class="fc bfc" id="L325" title="All 2 branches covered.">        for (Rating rating : reviews) {</span>
+<span class="fc" id="L326">            VBox item = card(label(rating.getRating() + &quot; / 5 · &quot; + rating.getListingTitle(), &quot;section-title&quot;),</span>
+<span class="fc" id="L327">                    label(&quot;@&quot; + rating.getBuyerUsername() + &quot; · &quot; + time(rating.getCreatedAt()), &quot;muted&quot;),</span>
+<span class="fc" id="L328">                    label(rating.getComment(), &quot;label&quot;));</span>
+<span class="fc bfc" id="L329" title="All 2 branches covered.">            if (rating.getId().equals(highlight)) item.getStyleClass().add(&quot;notif-unread&quot;);</span>
+<span class="fc bfc" id="L330" title="All 2 branches covered.">            if (rating.getSellerReply() != null) item.getChildren().add(label(&quot;Your reply: &quot; + rating.getSellerReply(), &quot;label&quot;));</span>
+<span class="pc bpc" id="L331" title="1 of 2 branches missed.">            if (rating.isHidden()) {</span>
+<span class="nc" id="L332">                item.getStyleClass().add(&quot;hidden-review&quot;);</span>
+<span class="nc" id="L333">                item.getChildren().add(label(&quot;Hidden by moderation&quot;, &quot;muted&quot;));</span>
+            } else {
+<span class="fc bfc" id="L335" title="All 2 branches covered.">                item.getChildren().add(new HBox(8, button(rating.getSellerReply() == null ? &quot;Reply&quot; : &quot;Edit reply&quot;, &quot;btn-outline&quot;,</span>
+<span class="fc" id="L336">                        () -&gt; textForm(contentPane, &quot;Reply to review&quot;, &quot;Send reply&quot;, &quot;Reply&quot;, rating.getSellerReply(), text -&gt; {</span>
+<span class="fc" id="L337">                            marketplace.reply(seller, rating.getId(), text);</span>
+<span class="fc" id="L338">                            showReviews(rating.getId());</span>
+<span class="fc" id="L339">                        })), button(&quot;Flag review&quot;, &quot;btn-outline&quot;,</span>
+<span class="fc" id="L340">                        () -&gt; textForm(contentPane, &quot;Flag review&quot;, &quot;Send report&quot;, &quot;Reason for flagging&quot;, &quot;&quot;, text -&gt; {</span>
+<span class="fc" id="L341">                            marketplace.flag(seller, rating.getId(), text);</span>
+<span class="fc" id="L342">                            showReviews(rating.getId());</span>
+<span class="fc" id="L343">                        }))));</span>
+            }
+<span class="fc" id="L345">            rows.getChildren().add(item);</span>
+<span class="fc" id="L346">        }</span>
+<span class="fc" id="L347">        show(btnReviews, &quot;Reviews &amp; Feedback&quot;, scroll(rows));</span>
+<span class="fc" id="L348">    }</span>
+
+    @FXML
+    private void showNotifications() {
+<span class="fc" id="L352">        show(btnNotifications, &quot;Notifications&quot;, notifications(seller, data, notice -&gt; {</span>
+<span class="nc" id="L353">            String id = notice.getRelatedId();</span>
+<span class="nc bnc" id="L354" title="All 6 branches missed.">            switch (notice.getRelatedScreen()) {</span>
+<span class="nc" id="L355">                case &quot;CHAT&quot; -&gt; showChat(data.findChat(id));</span>
+<span class="nc" id="L356">                case &quot;REQUESTS&quot; -&gt; showRequests(null, id);</span>
+                case &quot;DEALS&quot; -&gt; {
+<span class="nc" id="L358">                    Deal deal = data.findDeal(id);</span>
+<span class="nc bnc" id="L359" title="All 2 branches missed.">                    if (deal == null) showRequests();</span>
+<span class="nc" id="L360">                    else showRequests(deal.getListingId(), deal.getRequestId());</span>
+<span class="nc" id="L361">                }</span>
+<span class="nc" id="L362">                case &quot;LISTINGS&quot; -&gt; showMyListings(id);</span>
+<span class="nc" id="L363">                case &quot;RATINGS&quot; -&gt; showReviews(id);</span>
+<span class="nc" id="L364">                default -&gt; showNotifications();</span>
+            }
+<span class="nc" id="L366">        }, this::badge));</span>
+<span class="fc" id="L367">    }</span>
+
+    @FXML
+<span class="fc" id="L370">    private void showProfile() { show(btnProfile, &quot;My Profile&quot;, profile(seller, accounts, this::welcome)); }</span>
+
+    @FXML
+    private void logout() {
+<span class="fc" id="L374">        SessionManager.logout();</span>
+<span class="fc" id="L375">        SceneManager.showWelcome();</span>
+<span class="fc" id="L376">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

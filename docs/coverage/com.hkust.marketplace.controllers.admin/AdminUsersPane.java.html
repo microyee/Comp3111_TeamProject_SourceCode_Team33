@@ -1,0 +1,348 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AdminUsersPane.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HKUST Marketplace</a> &gt; <a href="index.source.html" class="el_package">com.hkust.marketplace.controllers.admin</a> &gt; <span class="el_source">AdminUsersPane.java</span></div><h1>AdminUsersPane.java</h1><pre class="source lang-java linenums">package com.hkust.marketplace.controllers.admin;
+
+import com.hkust.marketplace.models.AuditLogEntry;
+import com.hkust.marketplace.models.ListingStatus;
+import com.hkust.marketplace.models.Notification;
+import com.hkust.marketplace.models.User;
+import com.hkust.marketplace.models.UserRole;
+import com.hkust.marketplace.utils.DummyDataService;
+import com.hkust.marketplace.utils.SessionManager;
+import javafx.beans.property.ReadOnlyStringWrapper;
+import javafx.collections.FXCollections;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.Dialog;
+import javafx.scene.control.Label;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableView;
+import javafx.scene.control.TextField;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.VBox;
+
+import java.util.Comparator;
+import java.util.List;
+import java.util.stream.Collectors;
+
+/**
+ * Task 3.3 – Manage All Users.
+ *
+ * &lt;p&gt;Lists buyer and seller accounts (admins are excluded) with search and role/status
+ * filters.  Supports edit (full name), deactivate, reactivate, add and soft delete.
+ * Deactivating hides a seller's live listings; soft-deleting also marks their listings
+ * REMOVED and records an audit entry, while deals and ratings are retained.&lt;/p&gt;
+ */
+final class AdminUsersPane extends VBox {
+
+    private final AdminDashboardController host;
+<span class="fc" id="L42">    private final DummyDataService data = DummyDataService.getInstance();</span>
+
+<span class="fc" id="L44">    private final TextField searchField = new TextField();</span>
+<span class="fc" id="L45">    private final ComboBox&lt;String&gt; roleFilter = new ComboBox&lt;&gt;(</span>
+<span class="fc" id="L46">            FXCollections.observableArrayList(&quot;All Roles&quot;, &quot;Buyers&quot;, &quot;Sellers&quot;));</span>
+<span class="fc" id="L47">    private final ComboBox&lt;String&gt; statusFilter = new ComboBox&lt;&gt;(</span>
+<span class="fc" id="L48">            FXCollections.observableArrayList(&quot;All Statuses&quot;, &quot;Active&quot;, &quot;Deactivated&quot;));</span>
+<span class="fc" id="L49">    private final Label summary = AdminUi.muted(&quot;&quot;);</span>
+<span class="fc" id="L50">    private final VBox list = new VBox(10);</span>
+
+    AdminUsersPane(AdminDashboardController host) {
+<span class="nc" id="L53">        this(host, null);</span>
+<span class="nc" id="L54">    }</span>
+
+    AdminUsersPane(AdminDashboardController host, String initialSearch) {
+<span class="fc" id="L57">        super(12);</span>
+<span class="fc" id="L58">        this.host = host;</span>
+<span class="fc" id="L59">        setPadding(new Insets(4));</span>
+
+<span class="fc" id="L61">        searchField.setPromptText(&quot;Search username or full name...&quot;);</span>
+<span class="fc" id="L62">        searchField.setPrefWidth(240);</span>
+<span class="fc bfc" id="L63" title="All 2 branches covered.">        if (initialSearch != null) {</span>
+<span class="fc" id="L64">            searchField.setText(initialSearch);</span>
+        }
+<span class="fc" id="L66">        roleFilter.getSelectionModel().selectFirst();</span>
+<span class="fc" id="L67">        statusFilter.getSelectionModel().selectFirst();</span>
+
+<span class="fc" id="L69">        Button auditButton = new Button(&quot;Audit Log&quot;);</span>
+<span class="fc" id="L70">        auditButton.getStyleClass().addAll(&quot;btn-outline&quot;, &quot;btn-sm&quot;);</span>
+<span class="fc" id="L71">        auditButton.setOnAction(event -&gt; showAuditLog());</span>
+
+<span class="fc" id="L73">        Button addButton = new Button(&quot;+ Add User&quot;);</span>
+<span class="fc" id="L74">        addButton.getStyleClass().addAll(&quot;btn-primary&quot;, &quot;btn-sm&quot;);</span>
+<span class="fc" id="L75">        addButton.setOnAction(event -&gt; addUser());</span>
+
+<span class="fc" id="L77">        HBox toolbar = AdminUi.toolbar(searchField, roleFilter, statusFilter,</span>
+<span class="fc" id="L78">                AdminUi.spacer(), auditButton, addButton);</span>
+<span class="fc" id="L79">        getChildren().addAll(toolbar, summary);</span>
+
+<span class="fc" id="L81">        list.setPadding(new Insets(2));</span>
+<span class="fc" id="L82">        ScrollPane scroll = AdminUi.scroll(list);</span>
+<span class="fc" id="L83">        VBox.setVgrow(scroll, Priority.ALWAYS);</span>
+<span class="fc" id="L84">        getChildren().add(scroll);</span>
+
+<span class="fc" id="L86">        searchField.textProperty().addListener((observable, oldValue, newValue) -&gt; refresh());</span>
+<span class="fc" id="L87">        roleFilter.valueProperty().addListener((observable, oldValue, newValue) -&gt; refresh());</span>
+<span class="fc" id="L88">        statusFilter.valueProperty().addListener((observable, oldValue, newValue) -&gt; refresh());</span>
+
+<span class="fc" id="L90">        refresh();</span>
+<span class="fc" id="L91">    }</span>
+
+    private void refresh() {
+<span class="fc" id="L94">        list.getChildren().clear();</span>
+
+<span class="fc" id="L96">        List&lt;User&gt; users = data.getAllUsers().stream()</span>
+<span class="fc bfc" id="L97" title="All 2 branches covered.">                .filter(user -&gt; user.getRole() != UserRole.ADMIN)</span>
+<span class="fc" id="L98">                .filter(this::matchesFilters)</span>
+<span class="fc" id="L99">                .sorted(Comparator</span>
+<span class="fc bfc" id="L100" title="All 2 branches covered.">                        .comparingInt((User user) -&gt; user.getRole() == UserRole.SELLER ? 1 : 0)</span>
+<span class="fc" id="L101">                        .thenComparing(User::getFullName,</span>
+<span class="fc" id="L102">                                Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)))</span>
+<span class="fc" id="L103">                .collect(Collectors.toList());</span>
+
+<span class="fc" id="L105">        summary.setText(users.size() + &quot; account(s) shown&quot;</span>
+<span class="fc bfc" id="L106" title="All 2 branches covered.">                + (users.isEmpty() ? &quot;&quot; : &quot; · admins are not managed here&quot;));</span>
+<span class="fc bfc" id="L107" title="All 2 branches covered.">        if (users.isEmpty()) {</span>
+<span class="fc" id="L108">            list.getChildren().add(AdminUi.emptyState(&quot;No matching users&quot;,</span>
+                    &quot;Try clearing the search or filters. Soft-deleted accounts are hidden from this list.&quot;));
+<span class="fc" id="L110">            return;</span>
+        }
+<span class="fc bfc" id="L112" title="All 2 branches covered.">        for (User user : users) {</span>
+<span class="fc" id="L113">            list.getChildren().add(createRow(user));</span>
+<span class="fc" id="L114">        }</span>
+<span class="fc" id="L115">    }</span>
+
+    private boolean matchesFilters(User user) {
+<span class="pc bpc" id="L118" title="1 of 2 branches missed.">        String query = searchField.getText() == null ? &quot;&quot; : searchField.getText().trim().toLowerCase();</span>
+<span class="fc bfc" id="L119" title="All 2 branches covered.">        if (!query.isEmpty()</span>
+<span class="fc bfc" id="L120" title="All 2 branches covered.">                &amp;&amp; !user.getUsername().toLowerCase().contains(query)</span>
+<span class="fc bfc" id="L121" title="All 2 branches covered.">                &amp;&amp; !(user.getFullName() != null</span>
+<span class="fc bfc" id="L122" title="All 2 branches covered.">                &amp;&amp; user.getFullName().toLowerCase().contains(query))) {</span>
+<span class="fc" id="L123">            return false;</span>
+        }
+
+<span class="fc" id="L126">        String role = roleFilter.getValue();</span>
+<span class="fc bfc" id="L127" title="All 4 branches covered.">        if (&quot;Buyers&quot;.equals(role) &amp;&amp; user.getRole() != UserRole.BUYER) return false;</span>
+<span class="fc bfc" id="L128" title="All 4 branches covered.">        if (&quot;Sellers&quot;.equals(role) &amp;&amp; user.getRole() != UserRole.SELLER) return false;</span>
+
+<span class="fc" id="L130">        String status = statusFilter.getValue();</span>
+<span class="fc bfc" id="L131" title="All 4 branches covered.">        if (&quot;Active&quot;.equals(status) &amp;&amp; !user.isActive()) return false;</span>
+<span class="fc bfc" id="L132" title="All 4 branches covered.">        if (&quot;Deactivated&quot;.equals(status) &amp;&amp; user.isActive()) return false;</span>
+<span class="fc" id="L133">        return true;</span>
+    }
+
+    private HBox createRow(User user) {
+<span class="fc" id="L137">        HBox row = new HBox(14);</span>
+<span class="fc" id="L138">        row.getStyleClass().add(&quot;card&quot;);</span>
+<span class="fc" id="L139">        row.setAlignment(Pos.CENTER_LEFT);</span>
+<span class="fc" id="L140">        row.setPadding(new Insets(12));</span>
+
+<span class="fc" id="L142">        Label avatar = new Label(AdminUi.initials(user.getFullName()));</span>
+<span class="fc" id="L143">        avatar.getStyleClass().add(&quot;avatar&quot;);</span>
+
+<span class="pc bpc" id="L145" title="1 of 4 branches missed.">        Label name = new Label(user.getFullName() == null || user.getFullName().isBlank()</span>
+<span class="fc" id="L146">                ? &quot;(no name)&quot; : user.getFullName());</span>
+<span class="fc" id="L147">        name.setStyle(&quot;-fx-font-weight: bold; -fx-font-size: 14px;&quot;);</span>
+<span class="fc" id="L148">        Label username = new Label(&quot;@&quot; + user.getUsername());</span>
+<span class="fc" id="L149">        username.getStyleClass().add(&quot;muted&quot;);</span>
+
+<span class="fc" id="L151">        HBox badges = new HBox(6, AdminUi.roleBadge(user.getRole()),</span>
+<span class="fc" id="L152">                AdminUi.userStatusBadge(user.isActive()));</span>
+
+<span class="fc bfc" id="L154" title="All 2 branches covered.">        long listingCount = user.getRole() == UserRole.SELLER</span>
+<span class="fc" id="L155">                ? data.getListingsBySeller(user.getUsername()).size() : 0;</span>
+<span class="fc" id="L156">        long dealCount = data.getAllDeals().stream()</span>
+<span class="fc bfc" id="L157" title="All 2 branches covered.">                .filter(deal -&gt; user.getUsername().equalsIgnoreCase(deal.getBuyerUsername())</span>
+<span class="fc bfc" id="L158" title="All 2 branches covered.">                        || user.getUsername().equalsIgnoreCase(deal.getSellerUsername()))</span>
+<span class="fc" id="L159">                .count();</span>
+<span class="fc" id="L160">        Label meta = new Label(&quot;Joined &quot; + AdminUi.formatDate(</span>
+<span class="pc bpc" id="L161" title="1 of 2 branches missed.">                user.getCreatedAt() == null ? null : user.getCreatedAt().toLocalDate())</span>
+                + &quot; · &quot; + listingCount + &quot; listing(s) · &quot; + dealCount + &quot; deal(s)&quot;);
+<span class="fc" id="L163">        meta.getStyleClass().add(&quot;hint-text&quot;);</span>
+
+<span class="fc" id="L165">        VBox identity = new VBox(3, name, new HBox(8, username, badges), meta);</span>
+<span class="fc" id="L166">        HBox.setHgrow(identity, Priority.ALWAYS);</span>
+
+<span class="fc" id="L168">        Button edit = new Button(&quot;Edit&quot;);</span>
+<span class="fc" id="L169">        edit.getStyleClass().addAll(&quot;btn-outline&quot;, &quot;btn-sm&quot;);</span>
+<span class="fc" id="L170">        edit.setOnAction(event -&gt; editUser(user));</span>
+
+<span class="fc bfc" id="L172" title="All 2 branches covered.">        Button toggle = new Button(user.isActive() ? &quot;Deactivate&quot; : &quot;Reactivate&quot;);</span>
+<span class="fc bfc" id="L173" title="All 2 branches covered.">        toggle.getStyleClass().addAll(user.isActive() ? &quot;btn-danger&quot; : &quot;btn-success&quot;, &quot;btn-sm&quot;);</span>
+<span class="fc" id="L174">        toggle.setOnAction(event -&gt; {</span>
+<span class="fc bfc" id="L175" title="All 2 branches covered.">            if (user.isActive()) {</span>
+<span class="fc" id="L176">                deactivateUser(user);</span>
+            } else {
+<span class="fc" id="L178">                reactivateUser(user);</span>
+            }
+<span class="fc" id="L180">        });</span>
+
+<span class="fc" id="L182">        Button delete = new Button(&quot;Delete&quot;);</span>
+<span class="fc" id="L183">        delete.getStyleClass().addAll(&quot;btn-danger&quot;, &quot;btn-sm&quot;);</span>
+<span class="fc" id="L184">        delete.setOnAction(event -&gt; deleteUser(user));</span>
+
+<span class="fc" id="L186">        HBox actions = new HBox(6, edit, toggle, delete);</span>
+<span class="fc" id="L187">        actions.setAlignment(Pos.CENTER_RIGHT);</span>
+
+<span class="fc" id="L189">        row.getChildren().addAll(avatar, identity, actions);</span>
+<span class="fc" id="L190">        com.hkust.marketplace.controllers.UiAnimations.hoverLift(row);</span>
+<span class="fc" id="L191">        return row;</span>
+    }
+
+    private void addUser() {
+<span class="fc" id="L195">        AdminUserFormDialog dialog = new AdminUserFormDialog(AdminUi.window(this), null);</span>
+<span class="fc" id="L196">        dialog.showAndWait().ifPresent(newUser -&gt; {</span>
+<span class="fc" id="L197">            data.registerUser(newUser);</span>
+<span class="fc" id="L198">            data.addNotification(new Notification(newUser.getUsername(), &quot;Account Created&quot;,</span>
+                    &quot;An administrator created your account. You can now log in with your username.&quot;,
+                    &quot;Account&quot;));
+<span class="fc" id="L201">            data.addNotification(new Notification(adminUsername(), &quot;User Created&quot;,</span>
+<span class="fc" id="L202">                    &quot;@&quot; + newUser.getUsername() + &quot; (&quot; + newUser.getRole() + &quot;) was created.&quot;,</span>
+<span class="fc" id="L203">                    &quot;Account&quot;, &quot;USERS&quot;, newUser.getUsername()));</span>
+<span class="fc" id="L204">            data.logAudit(adminUsername(), &quot;CREATE_USER&quot;, &quot;USER&quot;, newUser.getUsername(),</span>
+<span class="fc" id="L205">                    &quot;Created &quot; + newUser.getRole() + &quot; account&quot;);</span>
+<span class="fc" id="L206">            host.refreshUnreadBadge();</span>
+<span class="fc" id="L207">            refresh();</span>
+<span class="fc" id="L208">            AdminDialogs.info(&quot;User created&quot;,</span>
+<span class="fc" id="L209">                    &quot;@&quot; + newUser.getUsername() + &quot; can now log in as a &quot; + newUser.getRole() + &quot;.&quot;);</span>
+<span class="fc" id="L210">        });</span>
+<span class="fc" id="L211">    }</span>
+
+    private void editUser(User user) {
+<span class="fc" id="L214">        AdminUserFormDialog dialog = new AdminUserFormDialog(AdminUi.window(this), user);</span>
+<span class="fc" id="L215">        dialog.showAndWait().ifPresent(updated -&gt; {</span>
+<span class="fc" id="L216">            User current = data.findUser(updated.getUsername());</span>
+<span class="pc bpc" id="L217" title="1 of 4 branches missed.">            if (current == null || current.isDeleted()) {</span>
+<span class="fc" id="L218">                AdminDialogs.warn(&quot;User no longer available&quot;,</span>
+                        &quot;The account was deleted while you were editing it. The list has been refreshed.&quot;);
+<span class="fc" id="L220">                refresh();</span>
+<span class="fc" id="L221">                return;</span>
+            }
+<span class="fc" id="L223">            data.updateUser(updated);</span>
+<span class="fc" id="L224">            data.addNotification(new Notification(adminUsername(), &quot;User Updated&quot;,</span>
+<span class="fc" id="L225">                    &quot;@&quot; + updated.getUsername() + &quot; was updated by an administrator.&quot;,</span>
+<span class="fc" id="L226">                    &quot;Account&quot;, &quot;USERS&quot;, updated.getUsername()));</span>
+<span class="fc" id="L227">            data.logAudit(adminUsername(), &quot;EDIT_USER&quot;, &quot;USER&quot;, updated.getUsername(),</span>
+                    &quot;Updated full name&quot;);
+<span class="fc" id="L229">            host.refreshUnreadBadge();</span>
+<span class="fc" id="L230">            refresh();</span>
+<span class="fc" id="L231">            AdminDialogs.info(&quot;User updated&quot;,</span>
+<span class="fc" id="L232">                    &quot;@&quot; + updated.getUsername() + &quot;'s profile was updated.&quot;);</span>
+<span class="fc" id="L233">        });</span>
+<span class="fc" id="L234">    }</span>
+
+    private void deactivateUser(User user) {
+<span class="fc" id="L237">        int liveListings = (int) data.getListingsBySeller(user.getUsername()).stream()</span>
+<span class="pc bpc" id="L238" title="1 of 2 branches missed.">                .filter(listing -&gt; listing.getStatus() == ListingStatus.LIVE)</span>
+<span class="fc" id="L239">                .count();</span>
+<span class="fc" id="L240">        String message = &quot;Deactivate @&quot; + user.getUsername() + &quot;?\n\n&quot;</span>
+                + &quot;The user will not be able to log in until reactivated.&quot;
+<span class="fc bfc" id="L242" title="All 2 branches covered.">                + (liveListings &gt; 0</span>
+<span class="fc" id="L243">                ? &quot;\nTheir &quot; + liveListings + &quot; live listing(s) will be hidden from the marketplace &quot;</span>
+                + &quot;(they are retained and reappear after reactivation).&quot;
+<span class="fc" id="L245">                : &quot;&quot;);</span>
+<span class="fc bfc" id="L246" title="All 2 branches covered.">        if (!AdminDialogs.confirmDestructive(&quot;Deactivate account&quot;, message, &quot;Deactivate&quot;)) {</span>
+<span class="fc" id="L247">            return;</span>
+        }
+<span class="pc bpc" id="L249" title="1 of 2 branches missed.">        if (data.deactivateUser(user.getUsername(), adminUsername())) {</span>
+<span class="fc" id="L250">            host.refreshUnreadBadge();</span>
+<span class="fc" id="L251">            refresh();</span>
+<span class="fc" id="L252">            AdminDialogs.info(&quot;Account deactivated&quot;,</span>
+<span class="fc" id="L253">                    &quot;@&quot; + user.getUsername() + &quot; can no longer log in.&quot;);</span>
+        }
+<span class="fc" id="L255">    }</span>
+
+    private void reactivateUser(User user) {
+<span class="fc bfc" id="L258" title="All 2 branches covered.">        if (!AdminDialogs.confirmDestructive(&quot;Reactivate account&quot;,</span>
+<span class="fc" id="L259">                &quot;Reactivate @&quot; + user.getUsername() + &quot;?\n\nThe user will be able to log in &quot;</span>
+                        + &quot;and their live listings will be visible again.&quot;,
+                &quot;Reactivate&quot;)) {
+<span class="fc" id="L262">            return;</span>
+        }
+<span class="pc bpc" id="L264" title="1 of 2 branches missed.">        if (data.reactivateUser(user.getUsername(), adminUsername())) {</span>
+<span class="fc" id="L265">            host.refreshUnreadBadge();</span>
+<span class="fc" id="L266">            refresh();</span>
+<span class="fc" id="L267">            AdminDialogs.info(&quot;Account reactivated&quot;,</span>
+<span class="fc" id="L268">                    &quot;@&quot; + user.getUsername() + &quot; can log in again.&quot;);</span>
+        }
+<span class="fc" id="L270">    }</span>
+
+    private void deleteUser(User user) {
+<span class="fc" id="L273">        long listingCount = data.getListingsBySeller(user.getUsername()).size();</span>
+<span class="fc" id="L274">        long dealCount = data.getAllDeals().stream()</span>
+<span class="fc bfc" id="L275" title="All 2 branches covered.">                .filter(deal -&gt; user.getUsername().equalsIgnoreCase(deal.getBuyerUsername())</span>
+<span class="pc bpc" id="L276" title="1 of 2 branches missed.">                        || user.getUsername().equalsIgnoreCase(deal.getSellerUsername()))</span>
+<span class="fc" id="L277">                .count();</span>
+<span class="fc" id="L278">        long ratingCount = data.getAllRatings().stream()</span>
+<span class="pc bpc" id="L279" title="1 of 2 branches missed.">                .filter(rating -&gt; user.getUsername().equalsIgnoreCase(rating.getSellerUsername())</span>
+<span class="fc bfc" id="L280" title="All 2 branches covered.">                        || user.getUsername().equalsIgnoreCase(rating.getBuyerUsername()))</span>
+<span class="fc" id="L281">                .count();</span>
+<span class="fc" id="L282">        long chatCount = data.getChatsForBuyer(user.getUsername()).size()</span>
+<span class="fc" id="L283">                + data.getChatsForSeller(user.getUsername()).size();</span>
+
+<span class="fc" id="L285">        String message = &quot;Permanently delete @&quot; + user.getUsername() + &quot;?\n\n&quot;</span>
+                + &quot;This performs a soft delete:\n&quot;
+                + &quot;• the account is marked deleted and can never log in again;\n&quot;
+                + &quot;• &quot; + listingCount + &quot; listing(s) are set to Removed and hidden;\n&quot;
+                + &quot;• active requests/deals are cancelled and counterparties are notified;\n&quot;
+                + &quot;• &quot; + dealCount + &quot; deal(s), &quot; + ratingCount + &quot; rating(s) and &quot;
+                + chatCount + &quot; chat(s) are retained for audit;\n&quot;
+                + &quot;• an audit-log entry records who deleted the account and when.\n\n&quot;
+                + &quot;The account cannot be restored from this screen.&quot;;
+<span class="fc bfc" id="L294" title="All 2 branches covered.">        if (!AdminDialogs.confirmDestructive(&quot;Delete account&quot;, message, &quot;Delete account&quot;)) {</span>
+<span class="fc" id="L295">            return;</span>
+        }
+<span class="pc bpc" id="L297" title="1 of 2 branches missed.">        if (data.deleteUser(user.getUsername(), adminUsername())) {</span>
+<span class="fc" id="L298">            host.refreshUnreadBadge();</span>
+<span class="fc" id="L299">            refresh();</span>
+<span class="fc" id="L300">            AdminDialogs.info(&quot;Account deleted&quot;,</span>
+<span class="fc" id="L301">                    &quot;@&quot; + user.getUsername() + &quot; has been soft-deleted. &quot;</span>
+                            + &quot;Deals, ratings and chats remain available for audit.&quot;);
+        }
+<span class="fc" id="L304">    }</span>
+
+    private void showAuditLog() {
+<span class="fc" id="L307">        Dialog&lt;Void&gt; dialog = new Dialog&lt;&gt;();</span>
+<span class="fc" id="L308">        dialog.setTitle(&quot;Admin Audit Log&quot;);</span>
+<span class="fc" id="L309">        dialog.setHeaderText(&quot;Recorded administrative actions&quot;);</span>
+<span class="fc" id="L310">        dialog.initOwner(AdminUi.window(this));</span>
+<span class="fc" id="L311">        dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);</span>
+
+<span class="fc" id="L313">        TableView&lt;AuditLogEntry&gt; table = new TableView&lt;&gt;();</span>
+<span class="fc" id="L314">        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);</span>
+<span class="fc" id="L315">        table.setPlaceholder(AdminUi.emptyState(&quot;No audit entries yet&quot;,</span>
+                &quot;Approvals, take-downs and account changes are recorded here.&quot;));
+
+<span class="fc" id="L318">        TableColumn&lt;AuditLogEntry, String&gt; time = new TableColumn&lt;&gt;(&quot;Time&quot;);</span>
+<span class="fc" id="L319">        time.setCellValueFactory(cell -&gt; new ReadOnlyStringWrapper(</span>
+<span class="fc" id="L320">                AdminUi.formatDateTime(cell.getValue().getTimestamp())));</span>
+<span class="fc" id="L321">        TableColumn&lt;AuditLogEntry, String&gt; actor = new TableColumn&lt;&gt;(&quot;Admin&quot;);</span>
+<span class="fc" id="L322">        actor.setCellValueFactory(cell -&gt; new ReadOnlyStringWrapper(</span>
+<span class="fc" id="L323">                cell.getValue().getActorUsername()));</span>
+<span class="fc" id="L324">        TableColumn&lt;AuditLogEntry, String&gt; action = new TableColumn&lt;&gt;(&quot;Action&quot;);</span>
+<span class="fc" id="L325">        action.setCellValueFactory(cell -&gt; new ReadOnlyStringWrapper(</span>
+<span class="fc" id="L326">                cell.getValue().getAction()));</span>
+<span class="fc" id="L327">        TableColumn&lt;AuditLogEntry, String&gt; target = new TableColumn&lt;&gt;(&quot;Target&quot;);</span>
+<span class="fc" id="L328">        target.setCellValueFactory(cell -&gt; new ReadOnlyStringWrapper(</span>
+<span class="fc" id="L329">                cell.getValue().getTargetType() + &quot; &quot; + cell.getValue().getTargetId()));</span>
+<span class="fc" id="L330">        TableColumn&lt;AuditLogEntry, String&gt; details = new TableColumn&lt;&gt;(&quot;Details&quot;);</span>
+<span class="fc" id="L331">        details.setCellValueFactory(cell -&gt; new ReadOnlyStringWrapper(</span>
+<span class="fc" id="L332">                cell.getValue().getDetails()));</span>
+
+<span class="fc" id="L334">        table.getColumns().addAll(time, actor, action, target, details);</span>
+<span class="fc" id="L335">        table.setItems(FXCollections.observableArrayList(data.getAuditLog()));</span>
+<span class="fc" id="L336">        table.setPrefSize(880, 460);</span>
+
+<span class="fc" id="L338">        dialog.getDialogPane().setContent(table);</span>
+<span class="fc" id="L339">        dialog.getDialogPane().setPrefWidth(920);</span>
+<span class="fc" id="L340">        dialog.showAndWait();</span>
+<span class="fc" id="L341">    }</span>
+
+    private String adminUsername() {
+<span class="fc" id="L344">        User user = SessionManager.getCurrentUser();</span>
+<span class="pc bpc" id="L345" title="1 of 2 branches missed.">        return user == null ? DummyDataService.ADMIN_USERNAME : user.getUsername();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

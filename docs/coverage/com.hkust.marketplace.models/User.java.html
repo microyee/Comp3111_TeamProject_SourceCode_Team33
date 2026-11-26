@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>User.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HKUST Marketplace</a> &gt; <a href="index.source.html" class="el_package">com.hkust.marketplace.models</a> &gt; <span class="el_source">User.java</span></div><h1>User.java</h1><pre class="source lang-java linenums">package com.hkust.marketplace.models;
+
+import com.hkust.marketplace.utils.PasswordUtils;
+
+import java.time.LocalDateTime;
+
+/**
+ * Abstract account superclass.  The UML specialisations are {@link Buyer}, {@link Seller}
+ * and {@link Admin}; each subclass fixes its {@link UserRole}.
+ *
+ * &lt;p&gt;Simple in-memory model (no persistence).  TODO: Replace with a real entity +
+ * repository when backend is added.&lt;/p&gt;
+ */
+public abstract class User {
+    private String username;
+    private String fullName;
+    private String passwordHash; // Salted PBKDF2-HMAC-SHA256 hash
+    private UserRole role;
+    private String residenceHall;   // Buyer optional
+    private String bio;             // Seller optional
+    private String preferredMeetup; // Seller optional
+<span class="fc" id="L22">    private boolean active = true;</span>
+    private LocalDateTime createdAt;
+    private double averageRating;   // For sellers
+    private int ratingCount;
+
+    // Soft-delete state.  Accounts are never hard-deleted from the in-memory store so
+    // that deals, chats and ratings keep a valid audit trail.
+    private boolean deleted;
+    private LocalDateTime deletedAt;
+    private String deletedBy;
+
+<span class="fc" id="L33">    protected User() {</span>
+<span class="fc" id="L34">        this.createdAt = LocalDateTime.now();</span>
+<span class="fc" id="L35">    }</span>
+
+    protected User(String username, String fullName, String password, UserRole role) {
+<span class="fc" id="L38">        this();</span>
+<span class="fc" id="L39">        this.username = username;</span>
+<span class="fc" id="L40">        this.fullName = fullName;</span>
+        // Passwords are stored as salted PBKDF2 hashes – never as plaintext.
+<span class="fc" id="L42">        this.passwordHash = PasswordUtils.hash(password);</span>
+<span class="fc" id="L43">        this.role = role;</span>
+<span class="fc" id="L44">    }</span>
+
+    // Getters &amp; Setters
+<span class="fc" id="L47">    public String getUsername() { return username; }</span>
+<span class="nc" id="L48">    public void setUsername(String username) { this.username = username; }</span>
+
+<span class="fc" id="L50">    public String getFullName() { return fullName; }</span>
+<span class="fc" id="L51">    public void setFullName(String fullName) { this.fullName = fullName; }</span>
+
+<span class="fc" id="L53">    public String getPasswordHash() { return passwordHash; }</span>
+<span class="fc" id="L54">    public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }</span>
+
+<span class="fc" id="L56">    public UserRole getRole() { return role; }</span>
+<span class="nc" id="L57">    public void setRole(UserRole role) { this.role = role; }</span>
+
+<span class="fc" id="L59">    public String getResidenceHall() { return residenceHall; }</span>
+<span class="fc" id="L60">    public void setResidenceHall(String residenceHall) { this.residenceHall = residenceHall; }</span>
+
+<span class="fc" id="L62">    public String getBio() { return bio; }</span>
+<span class="fc" id="L63">    public void setBio(String bio) { this.bio = bio; }</span>
+
+<span class="fc" id="L65">    public String getPreferredMeetup() { return preferredMeetup; }</span>
+<span class="fc" id="L66">    public void setPreferredMeetup(String preferredMeetup) { this.preferredMeetup = preferredMeetup; }</span>
+
+<span class="fc" id="L68">    public boolean isActive() { return active; }</span>
+<span class="fc" id="L69">    public void setActive(boolean active) { this.active = active; }</span>
+
+<span class="fc" id="L71">    public LocalDateTime getCreatedAt() { return createdAt; }</span>
+<span class="nc" id="L72">    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }</span>
+
+<span class="nc" id="L74">    public double getAverageRating() { return averageRating; }</span>
+<span class="fc" id="L75">    public void setAverageRating(double averageRating) { this.averageRating = averageRating; }</span>
+
+<span class="nc" id="L77">    public int getRatingCount() { return ratingCount; }</span>
+<span class="fc" id="L78">    public void setRatingCount(int ratingCount) { this.ratingCount = ratingCount; }</span>
+
+<span class="fc" id="L80">    public boolean isDeleted() { return deleted; }</span>
+<span class="fc" id="L81">    public void setDeleted(boolean deleted) { this.deleted = deleted; }</span>
+
+<span class="nc" id="L83">    public LocalDateTime getDeletedAt() { return deletedAt; }</span>
+<span class="fc" id="L84">    public void setDeletedAt(LocalDateTime deletedAt) { this.deletedAt = deletedAt; }</span>
+
+<span class="nc" id="L86">    public String getDeletedBy() { return deletedBy; }</span>
+<span class="fc" id="L87">    public void setDeletedBy(String deletedBy) { this.deletedBy = deletedBy; }</span>
+
+    @Override
+    public String toString() {
+<span class="nc" id="L91">        return fullName + &quot; (@&quot; + username + &quot;)&quot;;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

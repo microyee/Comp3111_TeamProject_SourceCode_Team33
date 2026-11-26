@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>MarketplaceCatalog.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HKUST Marketplace</a> &gt; <a href="index.source.html" class="el_package">com.hkust.marketplace.utils</a> &gt; <span class="el_source">MarketplaceCatalog.java</span></div><h1>MarketplaceCatalog.java</h1><pre class="source lang-java linenums">package com.hkust.marketplace.utils;
+
+import com.hkust.marketplace.models.*;
+
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.stream.Stream;
+
+import static com.hkust.marketplace.utils.MarketplaceAccounts.*;
+
+public final class MarketplaceCatalog {
+<span class="fc" id="L12">    public enum Sort {</span>
+<span class="fc" id="L13">        NEWEST(&quot;Newest&quot;), PRICE_ASC(&quot;Price low to high&quot;), PRICE_DESC(&quot;Price high to low&quot;);</span>
+        private final String label;
+<span class="fc" id="L15">        Sort(String label) { this.label = label; }</span>
+<span class="fc" id="L16">        @Override public String toString() { return label; }</span>
+    }
+
+<span class="fc" id="L19">    public record Filter(String query, ListingType type, String category, String condition,</span>
+                         Double minPrice, Double maxPrice, Sort sort) {}
+
+    private final DummyDataService data;
+    private final MarketplaceAccounts accounts;
+<span class="fc" id="L24">    private final Map&lt;String, Set&lt;String&gt;&gt; favourites = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L25">    private final Map&lt;String, Set&lt;String&gt;&gt; follows = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L26">    private final Map&lt;String, Report&gt; reports = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc" id="L27">    private int nextReportId = 1;</span>
+
+<span class="fc" id="L29">    public MarketplaceCatalog(DummyDataService data) {</span>
+<span class="fc" id="L30">        this.data = data;</span>
+<span class="fc" id="L31">        accounts = new MarketplaceAccounts(data);</span>
+<span class="fc" id="L32">    }</span>
+
+    public List&lt;Listing&gt; browse(User buyer, Filter filter) {
+<span class="fc" id="L35">        synchronized (data) {</span>
+<span class="fc" id="L36">            accounts.requireAccount(buyer, UserRole.BUYER);</span>
+<span class="fc" id="L37">            Objects.requireNonNull(filter, &quot;filter&quot;);</span>
+<span class="fc" id="L38">            validateRange(filter.minPrice(), filter.maxPrice());</span>
+<span class="fc" id="L39">            String query = clean(filter.query()).toLowerCase(Locale.ROOT);</span>
+<span class="fc" id="L40">            Stream&lt;Listing&gt; listings = data.getLiveListings().stream()</span>
+<span class="fc bfc" id="L41" title="All 4 branches covered.">                    .filter(l -&gt; filter.type() == null || l.getType() == filter.type())</span>
+<span class="fc bfc" id="L42" title="All 4 branches covered.">                    .filter(l -&gt; filter.category() == null || filter.category().equals(l.getCategory()))</span>
+<span class="fc bfc" id="L43" title="All 4 branches covered.">                    .filter(l -&gt; filter.condition() == null || filter.condition().equals(l.getCondition()))</span>
+<span class="fc bfc" id="L44" title="All 4 branches covered.">                    .filter(l -&gt; contains(l.getTitle(), query) || contains(l.getDescription(), query)</span>
+<span class="fc bfc" id="L45" title="All 2 branches covered.">                            || contains(l.getSellerFullName(), query));</span>
+<span class="fc bfc" id="L46" title="All 4 branches covered.">            if (filter.minPrice() != null || filter.maxPrice() != null) {</span>
+<span class="fc bfc" id="L47" title="All 2 branches covered.">                listings = listings.filter(l -&gt; l.getPrice() != null</span>
+<span class="fc bfc" id="L48" title="All 4 branches covered.">                        &amp;&amp; (filter.minPrice() == null || l.getPrice() &gt;= filter.minPrice())</span>
+<span class="pc bpc" id="L49" title="1 of 4 branches missed.">                        &amp;&amp; (filter.maxPrice() == null || l.getPrice() &lt;= filter.maxPrice()));</span>
+            }
+<span class="fc" id="L51">            Comparator&lt;Listing&gt; newest = Comparator.comparing(Listing::getPostedAt,</span>
+<span class="fc" id="L52">                    Comparator.nullsLast(Comparator.reverseOrder())).thenComparing(Listing::getId);</span>
+<span class="fc bfc" id="L53" title="All 3 branches covered.">            return listings.sorted(switch (Objects.requireNonNullElse(filter.sort(), Sort.NEWEST)) {</span>
+<span class="fc" id="L54">                case NEWEST -&gt; newest;</span>
+<span class="fc" id="L55">                case PRICE_ASC -&gt; Comparator.comparing(Listing::getPrice,</span>
+<span class="fc" id="L56">                        Comparator.nullsLast(Comparator.naturalOrder())).thenComparing(newest);</span>
+<span class="fc" id="L57">                case PRICE_DESC -&gt; Comparator.comparing(Listing::getPrice,</span>
+<span class="fc" id="L58">                        Comparator.nullsLast(Comparator.reverseOrder())).thenComparing(newest);</span>
+<span class="fc" id="L59">            }).toList();</span>
+        }
+    }
+
+    public Listing openListing(User buyer, String id) {
+<span class="fc" id="L64">        synchronized (data) {</span>
+<span class="fc" id="L65">            accounts.requireAccount(buyer, UserRole.BUYER);</span>
+<span class="fc" id="L66">            Listing listing = data.findListing(id);</span>
+<span class="fc bfc" id="L67" title="All 2 branches covered.">            require(listing != null, &quot;Listing no longer exists.&quot;);</span>
+<span class="fc bfc" id="L68" title="All 2 branches covered.">            if (!isPublic(listing)) {</span>
+<span class="fc bfc" id="L69" title="All 2 branches covered.">                require(data.getRequestsForBuyer(buyer.getUsername()).stream().anyMatch(r -&gt; id.equals(r.getListingId()))</span>
+<span class="pc bpc" id="L70" title="1 of 2 branches missed.">                        || data.getDealsForBuyer(buyer.getUsername()).stream().anyMatch(d -&gt; id.equals(d.getListingId()))</span>
+<span class="fc bfc" id="L71" title="All 2 branches covered.">                        || data.getChatsForBuyer(buyer.getUsername()).stream().anyMatch(c -&gt; id.equals(c.getListingId())),</span>
+                        &quot;This listing is unavailable.&quot;);
+            }
+<span class="fc" id="L74">            listing.setViewCount(listing.getViewCount() + 1);</span>
+<span class="fc" id="L75">            return listing;</span>
+        }
+    }
+
+    public boolean isPublic(Listing listing) {
+<span class="fc bfc" id="L80" title="All 4 branches covered.">        return listing.getStatus() == ListingStatus.LIVE &amp;&amp; available(data.findUser(listing.getSellerUsername()));</span>
+    }
+
+    public void favourite(User buyer, String id, boolean save) {
+<span class="fc" id="L84">        synchronized (data) {</span>
+<span class="fc" id="L85">            accounts.requireAccount(buyer, UserRole.BUYER);</span>
+<span class="fc" id="L86">            Set&lt;String&gt; ids = entries(favourites, buyer);</span>
+<span class="fc bfc" id="L87" title="All 2 branches covered.">            if (!save) {</span>
+<span class="fc" id="L88">                ids.remove(id);</span>
+<span class="fc" id="L89">                return;</span>
+            }
+<span class="fc" id="L91">            Listing listing = data.findListing(id);</span>
+<span class="fc bfc" id="L92" title="All 4 branches covered.">            require(listing != null &amp;&amp; isPublic(listing), &quot;This listing is unavailable.&quot;);</span>
+<span class="fc" id="L93">            ids.add(id);</span>
+<span class="fc" id="L94">        }</span>
+<span class="fc" id="L95">    }</span>
+
+    public boolean isFavourite(User buyer, String id) {
+<span class="fc" id="L98">        synchronized (data) {</span>
+<span class="fc" id="L99">            accounts.requireAccount(buyer, UserRole.BUYER);</span>
+<span class="fc" id="L100">            return entries(favourites, buyer).contains(id);</span>
+        }
+    }
+
+    public List&lt;Listing&gt; favourites(User buyer) {
+<span class="fc" id="L105">        synchronized (data) {</span>
+<span class="fc" id="L106">            accounts.requireAccount(buyer, UserRole.BUYER);</span>
+<span class="fc" id="L107">            return entries(favourites, buyer).stream().map(data::findListing).filter(Objects::nonNull).toList();</span>
+        }
+    }
+
+    public void follow(User buyer, String username, boolean save) {
+<span class="fc" id="L112">        synchronized (data) {</span>
+<span class="fc" id="L113">            accounts.requireAccount(buyer, UserRole.BUYER);</span>
+<span class="fc" id="L114">            String name = clean(username).toLowerCase(Locale.ROOT);</span>
+<span class="fc" id="L115">            Set&lt;String&gt; names = entries(follows, buyer);</span>
+<span class="fc bfc" id="L116" title="All 2 branches covered.">            if (!save) {</span>
+<span class="fc" id="L117">                names.remove(name);</span>
+<span class="fc" id="L118">                return;</span>
+            }
+<span class="fc" id="L120">            User seller = data.findUser(name);</span>
+<span class="fc bfc" id="L121" title="All 4 branches covered.">            require(available(seller) &amp;&amp; seller.getRole() == UserRole.SELLER, &quot;Seller profile is unavailable.&quot;);</span>
+<span class="fc" id="L122">            names.add(name);</span>
+<span class="fc" id="L123">        }</span>
+<span class="fc" id="L124">    }</span>
+
+    public boolean isFollowing(User buyer, String seller) {
+<span class="fc" id="L127">        synchronized (data) {</span>
+<span class="fc" id="L128">            accounts.requireAccount(buyer, UserRole.BUYER);</span>
+<span class="fc" id="L129">            return entries(follows, buyer).contains(clean(seller).toLowerCase(Locale.ROOT));</span>
+        }
+    }
+
+    public List&lt;User&gt; following(User buyer) {
+<span class="fc" id="L134">        synchronized (data) {</span>
+<span class="fc" id="L135">            accounts.requireAccount(buyer, UserRole.BUYER);</span>
+<span class="fc" id="L136">            return entries(follows, buyer).stream().map(data::findUser).filter(Objects::nonNull).toList();</span>
+        }
+    }
+
+    void notifyFollowers(Listing listing) {
+<span class="fc" id="L141">        follows.forEach((username, sellers) -&gt; {</span>
+<span class="pc bpc" id="L142" title="1 of 4 branches missed.">            if (sellers.contains(listing.getSellerUsername()) &amp;&amp; available(data.findUser(username))) {</span>
+<span class="fc" id="L143">                data.addNotification(new Notification(username, &quot;New listing from &quot; + listing.getSellerFullName(),</span>
+<span class="fc" id="L144">                        listing.getTitle(), &quot;Listing&quot;, &quot;LISTING&quot;, listing.getId()));</span>
+            }
+<span class="fc" id="L146">        });</span>
+<span class="fc" id="L147">    }</span>
+
+    public Report reportListing(User buyer, String id, String reason) {
+<span class="fc" id="L150">        synchronized (data) {</span>
+<span class="fc" id="L151">            accounts.requireAccount(buyer, UserRole.BUYER);</span>
+<span class="fc" id="L152">            Listing listing = data.findListing(id);</span>
+<span class="fc bfc" id="L153" title="All 4 branches covered.">            require(listing != null &amp;&amp; isPublic(listing), &quot;This listing is unavailable.&quot;);</span>
+<span class="fc" id="L154">            return fileReport(buyer, Report.Target.LISTING, id, listing.getTitle(), reason);</span>
+        }
+    }
+
+    Report fileReport(User user, Report.Target target, String id, String subject, String reason) {
+<span class="fc" id="L159">        String message = requiredText(reason, &quot;Reason&quot;, 1000);</span>
+<span class="fc bfc" id="L160" title="All 4 branches covered.">        require(reports.values().stream().noneMatch(r -&gt; r.isOpen() &amp;&amp; r.target() == target</span>
+<span class="pc bpc" id="L161" title="2 of 4 branches missed.">                &amp;&amp; r.targetId().equals(id) &amp;&amp; r.reporter().equals(user.getUsername())),</span>
+                &quot;You already have an open report for this item.&quot;);
+<span class="fc" id="L163">        String reportId = &quot;RP&quot; + nextReportId++;</span>
+<span class="fc" id="L164">        Report report = new Report(reportId, user.getUsername(), target, id, subject,</span>
+<span class="fc" id="L165">                message, LocalDateTime.now(), null, null);</span>
+<span class="fc" id="L166">        reports.put(reportId, report);</span>
+<span class="fc" id="L167">        data.addNotification(new Notification(DummyDataService.ADMIN_USERNAME, &quot;New moderation report&quot;,</span>
+<span class="fc" id="L168">                &quot;@&quot; + user.getUsername() + &quot; reported &quot; + subject + &quot;. &quot; + message,</span>
+                &quot;Report&quot;, &quot;REPORTS&quot;, reportId));
+<span class="fc" id="L170">        return report;</span>
+    }
+
+    public List&lt;Report&gt; reports(User admin) {
+<span class="fc" id="L174">        synchronized (data) {</span>
+<span class="fc" id="L175">            accounts.requireAccount(admin, UserRole.ADMIN);</span>
+<span class="fc" id="L176">            return reports.values().stream().sorted(Comparator.comparing(Report::submittedAt).reversed()).toList();</span>
+        }
+    }
+
+    public void resolve(User admin, String reportId, String resolution) {
+<span class="fc" id="L181">        synchronized (data) {</span>
+<span class="fc" id="L182">            accounts.requireAccount(admin, UserRole.ADMIN);</span>
+<span class="fc" id="L183">            Report report = reports.get(reportId);</span>
+<span class="fc bfc" id="L184" title="All 4 branches covered.">            require(report != null &amp;&amp; report.isOpen(), &quot;This report has already been resolved or is unavailable.&quot;);</span>
+<span class="fc" id="L185">            String note = requiredText(resolution, &quot;Resolution&quot;, 1000);</span>
+<span class="fc" id="L186">            reports.put(reportId, report.resolve(note, LocalDateTime.now()));</span>
+<span class="fc" id="L187">            data.logAudit(admin.getUsername(), &quot;RESOLVE_REPORT&quot;, &quot;REPORT&quot;, reportId, note);</span>
+<span class="fc" id="L188">            data.addNotification(new Notification(report.reporter(), &quot;Report reviewed&quot;, report.subject() + &quot;: &quot; + note,</span>
+                    &quot;Report&quot;));
+<span class="fc" id="L190">        }</span>
+<span class="fc" id="L191">    }</span>
+
+    public static boolean contains(String value, String normalizedQuery) {
+<span class="fc" id="L194">        return clean(value).toLowerCase(Locale.ROOT).contains(normalizedQuery);</span>
+    }
+
+    public static void validateRange(Double min, Double max) {
+<span class="fc bfc" id="L198" title="All 10 branches covered.">        require(validBound(min) &amp;&amp; validBound(max) &amp;&amp; (min == null || max == null || max &gt;= min),</span>
+                &quot;Enter a valid price range. The maximum must be at least the minimum.&quot;);
+<span class="fc" id="L200">    }</span>
+
+    private static boolean validBound(Double value) {
+<span class="fc bfc" id="L203" title="All 6 branches covered.">        return value == null || Double.isFinite(value) &amp;&amp; value &gt;= 0;</span>
+    }
+
+    private Set&lt;String&gt; entries(Map&lt;String, Set&lt;String&gt;&gt; map, User user) {
+<span class="fc" id="L207">        return map.computeIfAbsent(user.getUsername(), key -&gt; new LinkedHashSet&lt;&gt;());</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

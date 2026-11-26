@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SceneManager.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HKUST Marketplace</a> &gt; <a href="index.source.html" class="el_package">com.hkust.marketplace.utils</a> &gt; <span class="el_source">SceneManager.java</span></div><h1>SceneManager.java</h1><pre class="source lang-java linenums">package com.hkust.marketplace.utils;
+
+import com.hkust.marketplace.controllers.UiAnimations;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
+import javafx.scene.control.Alert;
+import javafx.stage.Stage;
+
+import java.io.IOException;
+import java.net.URL;
+
+/**
+ * Central navigation helper.
+ * Loads FXML scenes and keeps a reference to the primary stage.
+ */
+<span class="nc" id="L17">public class SceneManager {</span>
+
+    private static Stage primaryStage;
+    private static final String FXML_BASE = &quot;/fxml/&quot;;
+
+    public static void init(Stage stage) {
+<span class="fc" id="L23">        primaryStage = stage;</span>
+<span class="fc" id="L24">    }</span>
+
+    public static Stage getPrimaryStage() {
+<span class="fc" id="L27">        return primaryStage;</span>
+    }
+
+    public static void switchScene(String fxmlName) {
+        try {
+<span class="pc bpc" id="L32" title="1 of 2 branches missed.">            if (primaryStage == null) {</span>
+<span class="nc" id="L33">                throw new IllegalStateException(&quot;SceneManager not initialized – primaryStage is null&quot;);</span>
+            }
+
+<span class="fc" id="L36">            URL resource = SceneManager.class.getResource(FXML_BASE + fxmlName);</span>
+<span class="pc bpc" id="L37" title="1 of 2 branches missed.">            if (resource == null) {</span>
+<span class="nc" id="L38">                throw new IOException(&quot;FXML resource not found on classpath: &quot; + FXML_BASE + fxmlName);</span>
+            }
+
+<span class="fc" id="L41">            System.out.println(&quot;[SceneManager] Loading: &quot; + resource);</span>
+<span class="fc" id="L42">            FXMLLoader loader = new FXMLLoader(resource);</span>
+<span class="fc" id="L43">            Parent root = loader.load();</span>
+<span class="fc" id="L44">            UiAnimations.fadeIn(root);</span>
+
+<span class="fc" id="L46">            Scene scene = primaryStage.getScene();</span>
+<span class="fc bfc" id="L47" title="All 2 branches covered.">            if (scene == null) {</span>
+<span class="fc" id="L48">                scene = new Scene(root, 1200, 780);</span>
+<span class="fc" id="L49">                URL css = SceneManager.class.getResource(&quot;/css/styles.css&quot;);</span>
+<span class="pc bpc" id="L50" title="1 of 2 branches missed.">                if (css != null) {</span>
+<span class="fc" id="L51">                    scene.getStylesheets().add(css.toExternalForm());</span>
+                }
+<span class="fc" id="L53">                primaryStage.setScene(scene);</span>
+<span class="fc" id="L54">            } else {</span>
+                // Keep stylesheets when swapping root
+<span class="fc" id="L56">                scene.setRoot(root);</span>
+            }
+<span class="fc" id="L58">            System.out.println(&quot;[SceneManager] Switched to: &quot; + fxmlName);</span>
+<span class="nc" id="L59">        } catch (Exception e) {</span>
+<span class="nc" id="L60">            e.printStackTrace();</span>
+<span class="nc bnc" id="L61" title="All 2 branches missed.">            Throwable cause = e.getCause() != null ? e.getCause() : e;</span>
+<span class="nc" id="L62">            String msg = &quot;Failed to load: &quot; + fxmlName + &quot;\n\n&quot; + cause.getClass().getSimpleName()</span>
+<span class="nc" id="L63">                    + &quot;: &quot; + cause.getMessage();</span>
+<span class="nc" id="L64">            System.err.println(&quot;[SceneManager] &quot; + msg);</span>
+
+            // Show a dialog so the error is visible without reading the console
+            try {
+<span class="nc" id="L68">                Alert alert = new Alert(Alert.AlertType.ERROR);</span>
+<span class="nc" id="L69">                alert.setTitle(&quot;Navigation Error&quot;);</span>
+<span class="nc" id="L70">                alert.setHeaderText(&quot;Could not open screen&quot;);</span>
+<span class="nc" id="L71">                alert.setContentText(msg);</span>
+<span class="nc" id="L72">                alert.showAndWait();</span>
+<span class="nc" id="L73">            } catch (Exception ignored) {</span>
+                // If even the alert fails, at least we printed to console
+<span class="nc" id="L75">            }</span>
+<span class="nc" id="L76">            throw new RuntimeException(msg, e);</span>
+<span class="fc" id="L77">        }</span>
+<span class="fc" id="L78">    }</span>
+
+    public static void showWelcome() {
+<span class="fc" id="L81">        switchScene(&quot;WelcomeView.fxml&quot;);</span>
+<span class="fc" id="L82">    }</span>
+
+    public static void showBuyerLogin() {
+<span class="fc" id="L85">        switchScene(&quot;buyer/BuyerLoginView.fxml&quot;);</span>
+<span class="fc" id="L86">    }</span>
+
+    public static void showBuyerRegister() {
+<span class="fc" id="L89">        switchScene(&quot;buyer/BuyerRegisterView.fxml&quot;);</span>
+<span class="fc" id="L90">    }</span>
+
+    public static void showBuyerDashboard() {
+<span class="fc" id="L93">        switchScene(&quot;buyer/BuyerDashboardView.fxml&quot;);</span>
+<span class="fc" id="L94">    }</span>
+
+    public static void showSellerLogin() {
+<span class="fc" id="L97">        switchScene(&quot;seller/SellerLoginView.fxml&quot;);</span>
+<span class="fc" id="L98">    }</span>
+
+    public static void showSellerRegister() {
+<span class="fc" id="L101">        switchScene(&quot;seller/SellerRegisterView.fxml&quot;);</span>
+<span class="fc" id="L102">    }</span>
+
+    public static void showSellerDashboard() {
+<span class="fc" id="L105">        switchScene(&quot;seller/SellerDashboardView.fxml&quot;);</span>
+<span class="fc" id="L106">    }</span>
+
+    public static void showAdminLogin() {
+<span class="fc" id="L109">        switchScene(&quot;admin/AdminLoginView.fxml&quot;);</span>
+<span class="fc" id="L110">    }</span>
+
+    public static void showAdminDashboard() {
+<span class="fc" id="L113">        switchScene(&quot;admin/AdminDashboardView.fxml&quot;);</span>
+<span class="fc" id="L114">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

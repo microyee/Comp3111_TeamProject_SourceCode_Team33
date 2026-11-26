@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SellerRegisterController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HKUST Marketplace</a> &gt; <a href="index.source.html" class="el_package">com.hkust.marketplace.controllers.seller</a> &gt; <span class="el_source">SellerRegisterController.java</span></div><h1>SellerRegisterController.java</h1><pre class="source lang-java linenums">package com.hkust.marketplace.controllers.seller;
+
+import com.hkust.marketplace.models.UserRole;
+import com.hkust.marketplace.utils.DummyDataService;
+import com.hkust.marketplace.utils.SceneManager;
+import com.hkust.marketplace.utils.MarketplaceAccounts;
+import javafx.collections.FXCollections;
+import javafx.fxml.FXML;
+import javafx.scene.control.*;
+
+<span class="fc" id="L11">public class SellerRegisterController {</span>
+
+    @FXML private TextField usernameField;
+    @FXML private TextField fullNameField;
+    @FXML private PasswordField passwordField;
+    @FXML private PasswordField confirmPasswordField;
+    @FXML private ComboBox&lt;String&gt; meetupCombo;
+    @FXML private TextArea bioArea;
+    @FXML private Label errorLabel;
+    @FXML private Label successLabel;
+
+    @FXML
+    public void initialize() {
+<span class="fc" id="L24">        meetupCombo.setItems(FXCollections.observableArrayList(DummyDataService.HKUST_LOCATIONS));</span>
+<span class="fc" id="L25">    }</span>
+
+    @FXML
+    private void handleRegister() {
+<span class="nc" id="L29">        hideMessages();</span>
+        try {
+<span class="nc" id="L31">            new MarketplaceAccounts(DummyDataService.getInstance()).register(UserRole.SELLER,</span>
+<span class="nc" id="L32">                    usernameField.getText(), fullNameField.getText(), passwordField.getText(),</span>
+<span class="nc" id="L33">                    confirmPasswordField.getText(), null, bioArea.getText(), meetupCombo.getValue());</span>
+<span class="nc" id="L34">        } catch (IllegalArgumentException e) {</span>
+<span class="nc" id="L35">            showError(e.getMessage());</span>
+<span class="nc" id="L36">            return;</span>
+<span class="nc" id="L37">        }</span>
+
+<span class="nc" id="L39">        showSuccess(&quot;Seller account created! You can now login.&quot;);</span>
+<span class="nc" id="L40">        usernameField.clear(); fullNameField.clear(); passwordField.clear();</span>
+<span class="nc" id="L41">        confirmPasswordField.clear(); meetupCombo.getSelectionModel().clearSelection(); bioArea.clear();</span>
+<span class="nc" id="L42">    }</span>
+
+    private void showError(String msg) {
+<span class="nc" id="L45">        errorLabel.setText(msg); errorLabel.setVisible(true); errorLabel.setManaged(true);</span>
+<span class="nc" id="L46">    }</span>
+    private void showSuccess(String msg) {
+<span class="nc" id="L48">        successLabel.setText(msg); successLabel.setVisible(true); successLabel.setManaged(true);</span>
+<span class="nc" id="L49">    }</span>
+    private void hideMessages() {
+<span class="nc" id="L51">        errorLabel.setVisible(false); errorLabel.setManaged(false);</span>
+<span class="nc" id="L52">        successLabel.setVisible(false); successLabel.setManaged(false);</span>
+<span class="nc" id="L53">    }</span>
+
+<span class="nc" id="L55">    @FXML private void goLogin() { SceneManager.showSellerLogin(); }</span>
+<span class="nc" id="L56">    @FXML private void goWelcome() { SceneManager.showWelcome(); }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

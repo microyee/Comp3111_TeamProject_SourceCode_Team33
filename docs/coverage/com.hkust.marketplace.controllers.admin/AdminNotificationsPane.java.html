@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AdminNotificationsPane.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HKUST Marketplace</a> &gt; <a href="index.source.html" class="el_package">com.hkust.marketplace.controllers.admin</a> &gt; <span class="el_source">AdminNotificationsPane.java</span></div><h1>AdminNotificationsPane.java</h1><pre class="source lang-java linenums">package com.hkust.marketplace.controllers.admin;
+
+import com.hkust.marketplace.models.Notification;
+import com.hkust.marketplace.models.User;
+import com.hkust.marketplace.utils.DummyDataService;
+import com.hkust.marketplace.utils.SessionManager;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.control.Button;
+import javafx.scene.control.ButtonBar;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.Dialog;
+import javafx.scene.control.Label;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.VBox;
+
+import java.util.List;
+import java.util.Optional;
+
+/**
+ * Task 3.6 – Admin Notification Board.
+ *
+ * &lt;p&gt;Notifications are newest-first, timestamped and categorised (Submission, Report,
+ * Account, System).  Unread items are highlighted.  Opening an item shows its details,
+ * marks it read and offers navigation to the related screen.  If the related listing or
+ * account no longer exists, the stored details are still shown with an explanation.&lt;/p&gt;
+ */
+final class AdminNotificationsPane extends VBox {
+
+    private final AdminDashboardController host;
+<span class="fc" id="L33">    private final DummyDataService data = DummyDataService.getInstance();</span>
+<span class="fc" id="L34">    private final Label summary = AdminUi.muted(&quot;&quot;);</span>
+<span class="fc" id="L35">    private final VBox list = new VBox(10);</span>
+
+    AdminNotificationsPane(AdminDashboardController host) {
+<span class="fc" id="L38">        super(12);</span>
+<span class="fc" id="L39">        this.host = host;</span>
+<span class="fc" id="L40">        setPadding(new Insets(4));</span>
+
+<span class="fc" id="L42">        Button markAll = new Button(&quot;Mark all as read&quot;);</span>
+<span class="fc" id="L43">        markAll.getStyleClass().addAll(&quot;btn-outline&quot;, &quot;btn-sm&quot;);</span>
+<span class="fc" id="L44">        markAll.setOnAction(event -&gt; {</span>
+<span class="fc" id="L45">            data.markAllNotificationsRead(adminUsername());</span>
+<span class="fc" id="L46">            host.refreshUnreadBadge();</span>
+<span class="fc" id="L47">            refresh();</span>
+<span class="fc" id="L48">        });</span>
+
+<span class="fc" id="L50">        Button refreshButton = new Button(&quot;Refresh&quot;);</span>
+<span class="fc" id="L51">        refreshButton.getStyleClass().addAll(&quot;btn-outline&quot;, &quot;btn-sm&quot;);</span>
+<span class="fc" id="L52">        refreshButton.setOnAction(event -&gt; refresh());</span>
+
+<span class="fc" id="L54">        HBox header = new HBox(12, summary, AdminUi.spacer(), refreshButton, markAll);</span>
+<span class="fc" id="L55">        header.setAlignment(Pos.CENTER_LEFT);</span>
+<span class="fc" id="L56">        getChildren().add(header);</span>
+
+<span class="fc" id="L58">        list.setPadding(new Insets(2));</span>
+<span class="fc" id="L59">        ScrollPane scroll = AdminUi.scroll(list);</span>
+<span class="fc" id="L60">        VBox.setVgrow(scroll, Priority.ALWAYS);</span>
+<span class="fc" id="L61">        getChildren().add(scroll);</span>
+
+<span class="fc" id="L63">        refresh();</span>
+<span class="fc" id="L64">    }</span>
+
+    private void refresh() {
+<span class="fc" id="L67">        list.getChildren().clear();</span>
+<span class="fc" id="L68">        List&lt;Notification&gt; notifications = data.getNotificationsFor(adminUsername());</span>
+<span class="fc" id="L69">        int unread = data.getUnreadCount(adminUsername());</span>
+<span class="fc bfc" id="L70" title="All 2 branches covered.">        summary.setText(notifications.isEmpty()</span>
+<span class="fc" id="L71">                ? &quot;No notifications.&quot;</span>
+<span class="fc" id="L72">                : notifications.size() + &quot; notification(s) · &quot; + unread + &quot; unread&quot;);</span>
+
+<span class="fc bfc" id="L74" title="All 2 branches covered.">        if (notifications.isEmpty()) {</span>
+<span class="fc" id="L75">            list.getChildren().add(AdminUi.emptyState(&quot;No notifications&quot;,</span>
+                    &quot;New submissions, reports and account changes will appear here.&quot;));
+<span class="fc" id="L77">            return;</span>
+        }
+<span class="fc bfc" id="L79" title="All 2 branches covered.">        for (Notification notification : notifications) {</span>
+<span class="fc" id="L80">            list.getChildren().add(createRow(notification));</span>
+<span class="fc" id="L81">        }</span>
+<span class="fc" id="L82">    }</span>
+
+    private HBox createRow(Notification notification) {
+<span class="fc" id="L85">        HBox row = new HBox(12);</span>
+<span class="fc" id="L86">        row.getStyleClass().addAll(&quot;notif-item&quot;,</span>
+<span class="fc bfc" id="L87" title="All 2 branches covered.">                notification.isRead() ? &quot;notif-read&quot; : &quot;notif-unread&quot;);</span>
+<span class="fc" id="L88">        row.setAlignment(Pos.CENTER_LEFT);</span>
+<span class="fc" id="L89">        row.setPadding(new Insets(13, 16, 13, 16));</span>
+
+<span class="fc bfc" id="L91" title="All 2 branches covered.">        Label unreadDot = new Label(notification.isRead() ? &quot;&quot; : &quot;●&quot;);</span>
+<span class="fc" id="L92">        unreadDot.setStyle(&quot;-fx-text-fill: #A68137; -fx-font-size: 12px;&quot;);</span>
+
+<span class="fc" id="L94">        Label title = new Label(notification.getTitle());</span>
+<span class="fc" id="L95">        title.setStyle(&quot;-fx-font-weight: bold; -fx-text-fill: #1a1a2e;&quot;);</span>
+<span class="fc" id="L96">        Label message = new Label(notification.getMessage());</span>
+<span class="fc" id="L97">        message.setWrapText(true);</span>
+<span class="fc" id="L98">        message.getStyleClass().add(&quot;muted&quot;);</span>
+<span class="fc" id="L99">        Label meta = new Label(notification.getCategory() + &quot; · &quot;</span>
+<span class="fc" id="L100">                + AdminUi.formatDateTime(notification.getTimestamp()));</span>
+<span class="fc" id="L101">        meta.getStyleClass().add(&quot;hint-text&quot;);</span>
+
+<span class="fc" id="L103">        VBox body = new VBox(4, title, message, meta);</span>
+<span class="fc" id="L104">        HBox.setHgrow(body, Priority.ALWAYS);</span>
+
+<span class="fc" id="L106">        HBox badges = new HBox(6, AdminUi.categoryBadge(notification.getCategory()));</span>
+<span class="fc bfc" id="L107" title="All 2 branches covered.">        if (notification.hasRelatedTarget()) {</span>
+<span class="fc" id="L108">            Button open = new Button(&quot;Open&quot;);</span>
+<span class="fc" id="L109">            open.getStyleClass().addAll(&quot;btn-primary&quot;, &quot;btn-sm&quot;);</span>
+<span class="fc" id="L110">            open.setOnAction(event -&gt; open(notification));</span>
+<span class="fc" id="L111">            badges.getChildren().add(open);</span>
+<span class="fc" id="L112">        } else {</span>
+<span class="fc" id="L113">            Button details = new Button(&quot;Details&quot;);</span>
+<span class="fc" id="L114">            details.getStyleClass().addAll(&quot;btn-outline&quot;, &quot;btn-sm&quot;);</span>
+<span class="fc" id="L115">            details.setOnAction(event -&gt; open(notification));</span>
+<span class="fc" id="L116">            badges.getChildren().add(details);</span>
+        }
+<span class="fc" id="L118">        badges.setAlignment(Pos.CENTER_RIGHT);</span>
+
+<span class="fc" id="L120">        row.getChildren().addAll(unreadDot, body, badges);</span>
+<span class="fc" id="L121">        com.hkust.marketplace.controllers.UiAnimations.hoverLift(row);</span>
+<span class="fc" id="L122">        return row;</span>
+    }
+
+    private void open(Notification notification) {
+<span class="fc bfc" id="L126" title="All 2 branches covered.">        if (!notification.isRead()) {</span>
+<span class="fc" id="L127">            data.markNotificationRead(notification.getId());</span>
+        }
+<span class="fc" id="L129">        host.refreshUnreadBadge();</span>
+<span class="fc" id="L130">        refresh();</span>
+
+<span class="fc" id="L132">        boolean available = relatedTargetAvailable(notification);</span>
+
+<span class="fc" id="L134">        Dialog&lt;ButtonType&gt; dialog = new Dialog&lt;&gt;();</span>
+<span class="fc" id="L135">        dialog.setTitle(notification.getTitle());</span>
+<span class="fc" id="L136">        dialog.setHeaderText(notification.getTitle());</span>
+<span class="fc" id="L137">        dialog.initOwner(AdminUi.window(this));</span>
+
+<span class="fc" id="L139">        ButtonType close = new ButtonType(&quot;Close&quot;, ButtonBar.ButtonData.CANCEL_CLOSE);</span>
+<span class="fc" id="L140">        ButtonType openRelated = new ButtonType(&quot;Open related screen&quot;,</span>
+                ButtonBar.ButtonData.OK_DONE);
+<span class="fc" id="L142">        dialog.getDialogPane().getButtonTypes().add(close);</span>
+<span class="fc bfc" id="L143" title="All 4 branches covered.">        if (notification.hasRelatedTarget() &amp;&amp; available) {</span>
+<span class="fc" id="L144">            dialog.getDialogPane().getButtonTypes().add(openRelated);</span>
+        }
+
+<span class="fc" id="L147">        Label category = AdminUi.categoryBadge(notification.getCategory());</span>
+<span class="fc" id="L148">        Label message = new Label(notification.getMessage());</span>
+<span class="fc" id="L149">        message.setWrapText(true);</span>
+<span class="fc" id="L150">        message.setStyle(&quot;-fx-text-fill: #1a1a2e;&quot;);</span>
+<span class="fc" id="L151">        Label meta = new Label(&quot;Received &quot; + AdminUi.formatDateTime(notification.getTimestamp()));</span>
+<span class="fc" id="L152">        meta.getStyleClass().add(&quot;hint-text&quot;);</span>
+
+<span class="fc" id="L154">        VBox content = new VBox(10, category, message, meta);</span>
+<span class="fc" id="L155">        content.setPadding(new Insets(8));</span>
+<span class="fc" id="L156">        content.setPrefWidth(440);</span>
+
+<span class="fc bfc" id="L158" title="All 2 branches covered.">        if (notification.hasRelatedTarget()) {</span>
+<span class="fc bfc" id="L159" title="All 2 branches covered.">            Label related = new Label(available</span>
+<span class="fc" id="L160">                    ? &quot;Related item: &quot; + notification.getRelatedScreen()</span>
+<span class="fc" id="L161">                    + &quot; · &quot; + notification.getRelatedId()</span>
+<span class="fc" id="L162">                    : &quot;The related listing or account is no longer available. &quot;</span>
+                    + &quot;The notification details above are retained.&quot;);
+<span class="fc" id="L164">            related.setWrapText(true);</span>
+<span class="fc bfc" id="L165" title="All 2 branches covered.">            related.getStyleClass().add(available ? &quot;hint-text&quot; : &quot;error-text&quot;);</span>
+<span class="fc" id="L166">            content.getChildren().add(related);</span>
+        }
+
+<span class="fc" id="L169">        dialog.getDialogPane().setContent(content);</span>
+<span class="fc" id="L170">        Optional&lt;ButtonType&gt; result = dialog.showAndWait();</span>
+<span class="pc bpc" id="L171" title="1 of 4 branches missed.">        if (result.isPresent() &amp;&amp; result.get() == openRelated) {</span>
+<span class="fc" id="L172">            host.openNotificationTarget(notification.getRelatedScreen(),</span>
+<span class="fc" id="L173">                    notification.getRelatedId());</span>
+        }
+<span class="fc" id="L175">    }</span>
+
+    private boolean relatedTargetAvailable(Notification notification) {
+<span class="fc" id="L178">        String screen = notification.getRelatedScreen();</span>
+<span class="fc bfc" id="L179" title="All 2 branches covered.">        if (screen == null) return true;</span>
+<span class="fc" id="L180">        String id = notification.getRelatedId();</span>
+<span class="fc bfc" id="L181" title="All 5 branches covered.">        return switch (screen) {</span>
+<span class="fc bfc" id="L182" title="All 2 branches covered.">            case &quot;LISTINGS&quot; -&gt; data.findListing(id) != null;</span>
+            case &quot;USERS&quot; -&gt; {
+<span class="fc" id="L184">                User user = data.findUser(id);</span>
+<span class="pc bpc" id="L185" title="1 of 4 branches missed.">                yield user != null &amp;&amp; !user.isDeleted();</span>
+            }
+<span class="fc bfc" id="L187" title="All 2 branches covered.">            case &quot;DEALS&quot; -&gt; data.findDeal(id) != null;</span>
+<span class="fc bfc" id="L188" title="All 2 branches covered.">            case &quot;RATINGS&quot; -&gt; data.findRating(id) != null;</span>
+<span class="fc" id="L189">            default -&gt; true;</span>
+        };
+    }
+
+    private String adminUsername() {
+<span class="fc" id="L194">        User user = SessionManager.getCurrentUser();</span>
+<span class="pc bpc" id="L195" title="1 of 2 branches missed.">        return user == null ? DummyDataService.ADMIN_USERNAME : user.getUsername();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

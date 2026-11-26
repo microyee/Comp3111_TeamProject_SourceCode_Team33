@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.hkust.marketplace.MarketplaceNavigationTest
+-------------------------------------------------------------------------------
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 10.27 s -- in com.hkust.marketplace.MarketplaceNavigationTest

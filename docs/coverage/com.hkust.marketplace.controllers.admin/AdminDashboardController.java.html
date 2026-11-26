@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AdminDashboardController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HKUST Marketplace</a> &gt; <a href="index.source.html" class="el_package">com.hkust.marketplace.controllers.admin</a> &gt; <span class="el_source">AdminDashboardController.java</span></div><h1>AdminDashboardController.java</h1><pre class="source lang-java linenums">package com.hkust.marketplace.controllers.admin;
+
+import com.hkust.marketplace.controllers.UiAnimations;
+
+import com.hkust.marketplace.models.User;
+import com.hkust.marketplace.utils.DummyDataService;
+import com.hkust.marketplace.utils.SceneManager;
+import com.hkust.marketplace.utils.SessionManager;
+import javafx.application.Platform;
+import javafx.fxml.FXML;
+import javafx.scene.Node;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.layout.StackPane;
+
+/**
+ * Task 3 – Admin Portal shell.
+ *
+ * &lt;p&gt;The dashboard owns navigation, the unread-notification badge and session guarding.
+ * Each section is implemented in its own pane class so the business screens stay
+ * readable and independently testable.&lt;/p&gt;
+ */
+<span class="fc" id="L23">public class AdminDashboardController {</span>
+
+    @FXML private StackPane contentPane;
+    @FXML private Label pageTitle;
+    @FXML private Label welcomeLabel;
+    @FXML private Label unreadLabel;
+    @FXML private Button btnReview;
+    @FXML private Button btnAllListings;
+    @FXML private Button btnUsers;
+    @FXML private Button btnDeals;
+    @FXML private Button btnRatings;
+    @FXML private Button btnNotifications;
+    @FXML private Button btnReports;
+    @FXML private Button btnProfile;
+
+    private Button currentActiveBtn;
+
+    @FXML
+    public void initialize() {
+        // Role-based access control at the screen boundary: a buyer/seller session (or
+        // a direct navigation without a session) cannot open the admin dashboard.
+<span class="pc bpc" id="L44" title="1 of 4 branches missed.">        if (!SessionManager.isAdmin() || !SessionManager.isSessionValid()) {</span>
+<span class="fc" id="L45">            SessionManager.logout();</span>
+<span class="fc" id="L46">            Platform.runLater(SceneManager::showAdminLogin);</span>
+<span class="fc" id="L47">            return;</span>
+        }
+
+<span class="fc" id="L50">        refreshWelcome();</span>
+<span class="fc" id="L51">        currentActiveBtn = btnReview;</span>
+<span class="fc" id="L52">        refreshUnreadBadge();</span>
+<span class="fc" id="L53">        showReview();</span>
+<span class="fc" id="L54">    }</span>
+
+    private void setActive(Button button, String title) {
+<span class="pc bpc" id="L57" title="1 of 2 branches missed.">        if (currentActiveBtn != null) {</span>
+<span class="fc" id="L58">            currentActiveBtn.getStyleClass().remove(&quot;sidebar-btn-active&quot;);</span>
+        }
+<span class="pc bpc" id="L60" title="2 of 4 branches missed.">        if (button != null &amp;&amp; !button.getStyleClass().contains(&quot;sidebar-btn-active&quot;)) {</span>
+<span class="fc" id="L61">            button.getStyleClass().add(&quot;sidebar-btn-active&quot;);</span>
+        }
+<span class="fc" id="L63">        currentActiveBtn = button;</span>
+<span class="fc" id="L64">        pageTitle.setText(title);</span>
+<span class="fc" id="L65">    }</span>
+
+    private void setPane(Node pane) {
+<span class="fc" id="L68">        UiAnimations.showPane(contentPane, pane);</span>
+<span class="fc" id="L69">    }</span>
+
+    public void refreshWelcome() {
+<span class="fc" id="L72">        User user = SessionManager.getCurrentUser();</span>
+<span class="fc bfc" id="L73" title="All 2 branches covered.">        if (welcomeLabel != null) {</span>
+<span class="fc bfc" id="L74" title="All 2 branches covered.">            welcomeLabel.setText(user == null ? &quot;&quot; : &quot;Admin: &quot; + user.getFullName());</span>
+        }
+<span class="fc" id="L76">    }</span>
+
+    /** Updates the header badge after notifications are read or a new one arrives. */
+    public void refreshUnreadBadge() {
+<span class="fc bfc" id="L80" title="All 2 branches covered.">        if (unreadLabel == null) return;</span>
+<span class="fc" id="L81">        User user = SessionManager.getCurrentUser();</span>
+<span class="fc bfc" id="L82" title="All 2 branches covered.">        if (user == null) return;</span>
+<span class="fc" id="L83">        int unread = DummyDataService.getInstance().getUnreadCount(user.getUsername());</span>
+<span class="fc bfc" id="L84" title="All 2 branches covered.">        unreadLabel.getStyleClass().setAll(&quot;badge&quot;, unread &gt; 0 ? &quot;badge-pending&quot; : &quot;badge-live&quot;);</span>
+<span class="fc bfc" id="L85" title="All 2 branches covered.">        unreadLabel.setText(unread &gt; 0 ? &quot;🔔 &quot; + unread + &quot; unread&quot; : &quot;All notifications read&quot;);</span>
+<span class="fc" id="L86">        unreadLabel.setVisible(true);</span>
+<span class="fc" id="L87">        unreadLabel.setManaged(true);</span>
+<span class="fc bfc" id="L88" title="All 2 branches covered.">        if (unread &gt; 0) UiAnimations.pulse(unreadLabel);</span>
+<span class="fc" id="L89">    }</span>
+
+    /** Navigation target used by the notification board. */
+    public void openNotificationTarget(String screen, String relatedId) {
+<span class="fc bfc" id="L93" title="All 2 branches covered.">        if (screen == null) {</span>
+<span class="fc" id="L94">            showNotifications();</span>
+<span class="fc" id="L95">            return;</span>
+        }
+<span class="fc bfc" id="L97" title="All 7 branches covered.">        switch (screen) {</span>
+<span class="fc" id="L98">            case &quot;REVIEW&quot; -&gt; showReview();</span>
+<span class="fc" id="L99">            case &quot;LISTINGS&quot; -&gt; showAllListings(relatedId);</span>
+<span class="fc" id="L100">            case &quot;USERS&quot; -&gt; showUsers(relatedId);</span>
+<span class="fc" id="L101">            case &quot;DEALS&quot; -&gt; showDeals();</span>
+<span class="fc" id="L102">            case &quot;RATINGS&quot; -&gt; showRatings(relatedId);</span>
+<span class="fc" id="L103">            case &quot;REPORTS&quot; -&gt; showReports(relatedId);</span>
+<span class="fc" id="L104">            default -&gt; showNotifications();</span>
+        }
+<span class="fc" id="L106">    }</span>
+
+    // =====================================================================
+    // Task 3.2 – Listing review and approval
+    // =====================================================================
+
+    @FXML
+    private void showReview() {
+<span class="fc" id="L114">        setActive(btnReview, &quot;Listing Review &amp; Approval&quot;);</span>
+<span class="fc" id="L115">        setPane(new AdminReviewPane(this));</span>
+<span class="fc" id="L116">    }</span>
+
+    // =====================================================================
+    // Task 3.7 – Manage all listings
+    // =====================================================================
+
+    @FXML
+    private void showAllListings() {
+<span class="fc" id="L124">        showAllListings(null);</span>
+<span class="fc" id="L125">    }</span>
+
+    public void showAllListings(String highlightId) {
+<span class="fc" id="L128">        setActive(btnAllListings, &quot;Manage All Listings&quot;);</span>
+<span class="fc" id="L129">        setPane(new AdminListingsPane(this, highlightId));</span>
+<span class="fc" id="L130">    }</span>
+
+    // =====================================================================
+    // Task 3.3 – Manage all users
+    // =====================================================================
+
+    @FXML
+    private void showUsers() {
+<span class="fc" id="L138">        showUsers(null);</span>
+<span class="fc" id="L139">    }</span>
+
+    public void showUsers(String initialSearch) {
+<span class="fc" id="L142">        setActive(btnUsers, &quot;Manage All Users&quot;);</span>
+<span class="fc" id="L143">        setPane(new AdminUsersPane(this, initialSearch));</span>
+<span class="fc" id="L144">    }</span>
+
+    // =====================================================================
+    // Task 3.5 – All deals record
+    // =====================================================================
+
+    @FXML
+    private void showDeals() {
+<span class="fc" id="L152">        setActive(btnDeals, &quot;All Deals Record&quot;);</span>
+<span class="fc" id="L153">        setPane(new AdminDealsPane(this));</span>
+<span class="fc" id="L154">    }</span>
+
+    // =====================================================================
+    // Task 3.8 – Seller ratings overview
+    // =====================================================================
+
+    @FXML
+    private void showRatings() {
+<span class="fc" id="L162">        showRatings(null);</span>
+<span class="fc" id="L163">    }</span>
+
+    public void showRatings(String initialSearch) {
+<span class="fc" id="L166">        setActive(btnRatings, &quot;Seller Ratings Overview&quot;);</span>
+<span class="fc" id="L167">        setPane(new AdminRatingsPane(this, initialSearch));</span>
+<span class="fc" id="L168">    }</span>
+
+    // =====================================================================
+    // Task 3.6 – Notification board
+    // =====================================================================
+
+    @FXML
+    private void showReports() {
+<span class="fc" id="L176">        showReports(null);</span>
+<span class="fc" id="L177">    }</span>
+
+    private void showReports(String reportId) {
+<span class="fc" id="L180">        setActive(btnReports, &quot;Moderation Reports&quot;);</span>
+<span class="fc" id="L181">        setPane(new AdminReportsPane(this, reportId));</span>
+<span class="fc" id="L182">    }</span>
+
+    @FXML
+    private void showNotifications() {
+<span class="fc" id="L186">        setActive(btnNotifications, &quot;Admin Notifications&quot;);</span>
+<span class="fc" id="L187">        setPane(new AdminNotificationsPane(this));</span>
+<span class="fc" id="L188">    }</span>
+
+    // =====================================================================
+    // Task 3.4 – Manage own profile
+    // =====================================================================
+
+    @FXML
+    private void showProfile() {
+<span class="fc" id="L196">        setActive(btnProfile, &quot;My Profile&quot;);</span>
+<span class="fc" id="L197">        setPane(new AdminProfilePane(this));</span>
+<span class="fc" id="L198">    }</span>
+
+    @FXML
+    private void logout() {
+<span class="fc bfc" id="L202" title="All 2 branches covered.">        if (AdminDialogs.confirm(&quot;Log out&quot;, &quot;Sign out of the Admin Portal?&quot;)) {</span>
+<span class="fc" id="L203">            SessionManager.logout();</span>
+<span class="fc" id="L204">            SceneManager.showWelcome();</span>
+        }
+<span class="fc" id="L206">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

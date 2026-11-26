@@ -1,0 +1,331 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PortalUi.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HKUST Marketplace</a> &gt; <a href="index.source.html" class="el_package">com.hkust.marketplace.controllers</a> &gt; <span class="el_source">PortalUi.java</span></div><h1>PortalUi.java</h1><pre class="source lang-java linenums">package com.hkust.marketplace.controllers;
+
+import com.hkust.marketplace.models.*;
+import com.hkust.marketplace.utils.*;
+import javafx.collections.FXCollections;
+import javafx.event.ActionEvent;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.Node;
+import javafx.scene.control.*;
+import javafx.scene.layout.*;
+import javafx.stage.Window;
+
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.util.Collection;
+import java.util.List;
+import java.util.function.Consumer;
+
+public final class PortalUi {
+<span class="fc" id="L22">    private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern(&quot;uuuu-MM-dd HH:mm:ss&quot;);</span>
+
+    private PortalUi() {}
+
+    public static String time(LocalDateTime value) {
+<span class="pc bpc" id="L27" title="1 of 2 branches missed.">        return value == null ? &quot;—&quot; : TIME.format(value);</span>
+    }
+
+    public static LocalDateTime parseTime(String value) {
+        try {
+<span class="nc" id="L32">            return LocalDateTime.parse(value.strip().replace(' ', 'T'));</span>
+<span class="nc" id="L33">        } catch (DateTimeParseException e) {</span>
+<span class="nc" id="L34">            throw new IllegalArgumentException(&quot;Use YYYY-MM-DD HH:MM:SS for the borrowing times.&quot;);</span>
+        }
+    }
+
+    public static Double number(String value) {
+<span class="fc bfc" id="L39" title="All 2 branches covered.">        if (value.isBlank()) return null;</span>
+        try {
+<span class="fc" id="L41">            return Double.valueOf(value.strip());</span>
+<span class="fc" id="L42">        } catch (NumberFormatException e) {</span>
+<span class="fc" id="L43">            throw new IllegalArgumentException(&quot;Enter a valid number.&quot;);</span>
+        }
+    }
+
+    public static Label label(String text, String style) {
+<span class="fc" id="L48">        Label label = new Label(text);</span>
+<span class="fc" id="L49">        label.getStyleClass().add(style);</span>
+<span class="fc" id="L50">        label.setWrapText(true);</span>
+<span class="fc" id="L51">        label.setMaxWidth(Double.MAX_VALUE);</span>
+<span class="fc" id="L52">        return label;</span>
+    }
+
+    public static VBox card(Node... children) {
+<span class="fc" id="L56">        VBox box = new VBox(8, children);</span>
+<span class="fc" id="L57">        box.getStyleClass().add(&quot;card&quot;);</span>
+<span class="fc" id="L58">        return box;</span>
+    }
+
+    public static Button button(String text, String style, Runnable work) {
+<span class="fc" id="L62">        Button button = new Button(text);</span>
+<span class="fc" id="L63">        button.getStyleClass().add(style);</span>
+<span class="fc" id="L64">        button.setOnAction(event -&gt; run(button, work));</span>
+<span class="fc" id="L65">        return button;</span>
+    }
+
+    public static void run(Node owner, Runnable work) {
+        try {
+<span class="fc" id="L70">            work.run();</span>
+<span class="nc" id="L71">        } catch (IllegalArgumentException e) {</span>
+<span class="nc" id="L72">            Alert alert = new Alert(Alert.AlertType.WARNING);</span>
+<span class="nc" id="L73">            style(alert, owner);</span>
+<span class="nc" id="L74">            alert.setTitle(&quot;Marketplace&quot;);</span>
+<span class="nc" id="L75">            alert.setHeaderText(null);</span>
+<span class="nc" id="L76">            alert.setContentText(e.getMessage());</span>
+<span class="nc" id="L77">            alert.showAndWait();</span>
+<span class="fc" id="L78">        }</span>
+<span class="fc" id="L79">    }</span>
+
+    public static ScrollPane scroll(Node content) {
+<span class="fc" id="L82">        ScrollPane scroll = new ScrollPane(content);</span>
+<span class="fc" id="L83">        scroll.setFitToWidth(true);</span>
+<span class="fc" id="L84">        scroll.setPannable(true);</span>
+<span class="fc" id="L85">        return scroll;</span>
+    }
+
+    public static TextField field(String placeholder) {
+<span class="fc" id="L89">        TextField field = new TextField();</span>
+<span class="fc" id="L90">        field.setPromptText(placeholder);</span>
+<span class="fc" id="L91">        field.setAccessibleText(placeholder);</span>
+<span class="fc" id="L92">        return field;</span>
+    }
+
+    public static PasswordField password(String placeholder) {
+<span class="fc" id="L96">        PasswordField field = new PasswordField();</span>
+<span class="fc" id="L97">        field.setPromptText(placeholder);</span>
+<span class="fc" id="L98">        field.setAccessibleText(placeholder);</span>
+<span class="fc" id="L99">        return field;</span>
+    }
+
+    public static &lt;T&gt; ComboBox&lt;T&gt; choice(String placeholder, Collection&lt;T&gt; options) {
+<span class="fc" id="L103">        ComboBox&lt;T&gt; combo = new ComboBox&lt;&gt;(FXCollections.observableArrayList(options));</span>
+<span class="fc" id="L104">        combo.setPromptText(placeholder);</span>
+<span class="fc" id="L105">        combo.setAccessibleText(placeholder);</span>
+<span class="fc" id="L106">        return combo;</span>
+    }
+
+    public static VBox formField(String caption, Control control) {
+<span class="fc" id="L110">        Label label = new Label(caption);</span>
+<span class="fc" id="L111">        label.setLabelFor(control);</span>
+<span class="fc" id="L112">        control.setMaxWidth(Double.MAX_VALUE);</span>
+<span class="fc" id="L113">        return new VBox(4, label, control);</span>
+    }
+
+    public static void style(Dialog&lt;?&gt; dialog, Node owner) {
+<span class="pc bpc" id="L117" title="1 of 4 branches missed.">        Window window = owner == null || owner.getScene() == null ? SceneManager.getPrimaryStage()</span>
+<span class="fc" id="L118">                : owner.getScene().getWindow();</span>
+        // A disposed or hidden owner without a live scene cannot own a modal dialog.
+<span class="pc bpc" id="L120" title="4 of 6 branches missed.">        if (window != null &amp;&amp; window.isShowing() &amp;&amp; window.getScene() != null) {</span>
+<span class="nc" id="L121">            dialog.initOwner(window);</span>
+        }
+<span class="fc" id="L123">        dialog.getDialogPane().getStylesheets().add(</span>
+<span class="fc" id="L124">                PortalUi.class.getResource(&quot;/css/styles.css&quot;).toExternalForm());</span>
+<span class="fc" id="L125">    }</span>
+
+    public static void form(Node owner, String title, String action, Node fields, Runnable save) {
+<span class="fc" id="L128">        Dialog&lt;ButtonType&gt; dialog = new Dialog&lt;&gt;();</span>
+<span class="fc" id="L129">        style(dialog, owner);</span>
+<span class="fc" id="L130">        dialog.setTitle(title);</span>
+<span class="fc" id="L131">        dialog.setHeaderText(title);</span>
+<span class="fc" id="L132">        var submit = new ButtonType(action, ButtonBar.ButtonData.OK_DONE);</span>
+<span class="fc" id="L133">        Label error = label(&quot;&quot;, &quot;error-text&quot;);</span>
+<span class="fc" id="L134">        error.setVisible(false);</span>
+<span class="fc" id="L135">        error.managedProperty().bind(error.visibleProperty());</span>
+<span class="fc" id="L136">        VBox content = new VBox(12, fields, error);</span>
+<span class="fc" id="L137">        content.setPrefWidth(440);</span>
+<span class="fc" id="L138">        dialog.getDialogPane().setContent(content);</span>
+<span class="fc" id="L139">        dialog.getDialogPane().getButtonTypes().setAll(submit, ButtonType.CANCEL);</span>
+<span class="fc" id="L140">        dialog.getDialogPane().lookupButton(submit).addEventFilter(ActionEvent.ACTION, event -&gt; {</span>
+            try {
+<span class="fc" id="L142">                save.run();</span>
+<span class="fc" id="L143">            } catch (IllegalArgumentException e) {</span>
+<span class="fc" id="L144">                error.setText(e.getMessage());</span>
+<span class="fc" id="L145">                error.setVisible(true);</span>
+<span class="fc" id="L146">                event.consume();</span>
+<span class="fc" id="L147">            }</span>
+<span class="fc" id="L148">        });</span>
+<span class="fc" id="L149">        dialog.showAndWait();</span>
+<span class="fc" id="L150">    }</span>
+
+    public static boolean confirm(Node owner, String title, String detail) {
+<span class="fc" id="L153">        Alert dialog = new Alert(Alert.AlertType.CONFIRMATION, detail, ButtonType.OK, ButtonType.CANCEL);</span>
+<span class="fc" id="L154">        style(dialog, owner);</span>
+<span class="fc" id="L155">        dialog.setTitle(title);</span>
+<span class="fc" id="L156">        dialog.setHeaderText(title);</span>
+<span class="fc" id="L157">        return dialog.showAndWait().filter(ButtonType.OK::equals).isPresent();</span>
+    }
+
+    public static void textForm(Node owner, String title, String action, String caption, String initial,
+                                Consumer&lt;String&gt; save) {
+<span class="fc" id="L162">        TextArea area = new TextArea(MarketplaceAccounts.clean(initial));</span>
+<span class="fc" id="L163">        area.setWrapText(true);</span>
+<span class="fc" id="L164">        area.setPrefRowCount(4);</span>
+<span class="fc" id="L165">        form(owner, title, action, formField(caption, area), () -&gt; save.accept(area.getText()));</span>
+<span class="fc" id="L166">    }</span>
+
+    public static void termsForm(Node owner, ListingType type, MarketplaceActivity.Terms initial,
+                                 String title, Consumer&lt;MarketplaceActivity.Terms&gt; save) {
+<span class="pc bpc" id="L170" title="3 of 4 branches missed.">        switch (type) {</span>
+            case SELL -&gt; {
+<span class="fc" id="L172">                TextField amount = field(&quot;Amount in HKD&quot;);</span>
+<span class="pc bpc" id="L173" title="1 of 2 branches missed.">                if (initial.price() != null) amount.setText(initial.price().toString());</span>
+<span class="fc" id="L174">                form(owner, title, &quot;Send&quot;, formField(&quot;Amount in HKD&quot;, amount),</span>
+<span class="fc" id="L175">                        () -&gt; save.accept(new MarketplaceActivity.Terms(number(amount.getText()), null, null)));</span>
+<span class="fc" id="L176">            }</span>
+            case LEND -&gt; {
+<span class="nc" id="L178">                TextField start = field(&quot;YYYY-MM-DD HH:MM:SS&quot;);</span>
+<span class="nc" id="L179">                TextField end = field(&quot;YYYY-MM-DD HH:MM:SS&quot;);</span>
+<span class="nc" id="L180">                LocalDateTime defaultStart = LocalDateTime.now().plusHours(1).withNano(0);</span>
+<span class="nc bnc" id="L181" title="All 2 branches missed.">                start.setText(time(initial.start() == null ? defaultStart : initial.start()));</span>
+<span class="nc bnc" id="L182" title="All 2 branches missed.">                end.setText(time(initial.end() == null ? defaultStart.plusHours(1) : initial.end()));</span>
+<span class="nc" id="L183">                form(owner, title, &quot;Send&quot;, new VBox(12, formField(&quot;Start (local time)&quot;, start),</span>
+<span class="nc" id="L184">                        formField(&quot;End (local time)&quot;, end)),</span>
+<span class="nc" id="L185">                        () -&gt; save.accept(MarketplaceActivity.Terms.loan(parseTime(start.getText()), parseTime(end.getText()))));</span>
+<span class="nc" id="L186">            }</span>
+            case GIVEAWAY -&gt; {
+<span class="nc bnc" id="L188" title="All 2 branches missed.">                if (confirm(owner, title, &quot;Reserve this giveaway while the seller reviews your claim?&quot;)) {</span>
+<span class="nc" id="L189">                    run(owner, () -&gt; save.accept(MarketplaceActivity.Terms.giveaway()));</span>
+                }
+            }
+        }
+<span class="fc" id="L193">    }</span>
+
+    public static Node profile(User user, MarketplaceAccounts accounts, Runnable updated) {
+<span class="fc" id="L196">        TextField name = field(&quot;Full name&quot;);</span>
+<span class="fc" id="L197">        name.setText(user.getFullName());</span>
+<span class="fc" id="L198">        var residence = choice(&quot;Residence hall&quot;, MarketplaceAccounts.RESIDENCES);</span>
+<span class="fc" id="L199">        residence.setValue(user.getResidenceHall());</span>
+<span class="fc" id="L200">        var meetup = choice(&quot;Preferred HKUST meet-up location&quot;, DummyDataService.HKUST_LOCATIONS);</span>
+<span class="fc" id="L201">        meetup.setValue(user.getPreferredMeetup());</span>
+<span class="fc" id="L202">        TextArea bio = new TextArea(MarketplaceAccounts.clean(user.getBio()));</span>
+<span class="fc" id="L203">        bio.setPrefRowCount(3);</span>
+<span class="fc" id="L204">        bio.setWrapText(true);</span>
+<span class="fc" id="L205">        PasswordField current = password(&quot;Current password&quot;);</span>
+<span class="fc" id="L206">        PasswordField next = password(&quot;New password&quot;);</span>
+<span class="fc" id="L207">        PasswordField confirm = password(&quot;Confirm new password&quot;);</span>
+<span class="fc" id="L208">        Label status = label(&quot;&quot;, &quot;muted&quot;);</span>
+<span class="fc bfc" id="L209" title="All 2 branches covered.">        boolean buyer = user.getRole() == UserRole.BUYER;</span>
+
+<span class="fc" id="L211">        VBox panel = card(label(&quot;@&quot; + user.getUsername() + &quot; · &quot; + user.getRole(), &quot;section-title&quot;),</span>
+<span class="fc" id="L212">                formField(&quot;Full name&quot;, name));</span>
+<span class="fc bfc" id="L213" title="All 2 branches covered.">        if (buyer) panel.getChildren().add(new HBox(8, formField(&quot;Residence hall (optional)&quot;, residence),</span>
+<span class="pc" id="L214">                button(&quot;Clear&quot;, &quot;btn-outline&quot;, () -&gt; residence.setValue(null))));</span>
+<span class="fc" id="L215">        else panel.getChildren().addAll(formField(&quot;Bio (optional)&quot;, bio),</span>
+<span class="fc" id="L216">                new HBox(8, formField(&quot;Preferred meet-up (optional)&quot;, meetup),</span>
+<span class="pc" id="L217">                        button(&quot;Clear&quot;, &quot;btn-outline&quot;, () -&gt; meetup.setValue(null))));</span>
+<span class="fc" id="L218">        panel.getChildren().addAll(new Separator(), label(&quot;Change password&quot;, &quot;section-title&quot;),</span>
+<span class="fc" id="L219">                formField(&quot;Current password&quot;, current), formField(&quot;New password&quot;, next),</span>
+<span class="fc" id="L220">                formField(&quot;Confirm new password&quot;, confirm), button(&quot;Save profile&quot;, &quot;btn-primary&quot;, () -&gt; {</span>
+<span class="nc" id="L221">                    accounts.updateProfile(user, name.getText(), residence.getValue(), bio.getText(), meetup.getValue(),</span>
+<span class="nc" id="L222">                            current.getText(), next.getText(), confirm.getText());</span>
+<span class="nc" id="L223">                    current.clear();</span>
+<span class="nc" id="L224">                    next.clear();</span>
+<span class="nc" id="L225">                    confirm.clear();</span>
+<span class="nc" id="L226">                    updated.run();</span>
+<span class="nc" id="L227">                    status.setText(&quot;Profile saved.&quot;);</span>
+<span class="nc" id="L228">                }), status);</span>
+<span class="fc" id="L229">        panel.setMaxWidth(620);</span>
+<span class="fc" id="L230">        VBox content = new VBox(panel);</span>
+<span class="fc" id="L231">        content.setPadding(new Insets(2, 10, 12, 2));</span>
+<span class="fc" id="L232">        return scroll(content);</span>
+    }
+
+    public static Node notifications(User user, DummyDataService data, Consumer&lt;Notification&gt; open, Runnable updateBadge) {
+<span class="fc" id="L236">        VBox rows = new VBox(10);</span>
+<span class="fc" id="L237">        var category = choice(&quot;All categories&quot;, data.getNotificationsFor(user.getUsername()).stream()</span>
+<span class="fc" id="L238">                .map(Notification::getCategory).distinct().sorted().toList());</span>
+<span class="fc" id="L239">        CheckBox unread = new CheckBox(&quot;Unread only&quot;);</span>
+<span class="fc" id="L240">        Runnable render = () -&gt; {</span>
+<span class="fc" id="L241">            rows.getChildren().clear();</span>
+<span class="fc bfc" id="L242" title="All 2 branches covered.">            for (Notification notice : data.getNotificationsFor(user.getUsername())) {</span>
+<span class="pc bpc" id="L243" title="4 of 6 branches missed.">                if ((unread.isSelected() &amp;&amp; notice.isRead()) || (category.getValue() != null</span>
+<span class="nc bnc" id="L244" title="All 2 branches missed.">                        &amp;&amp; !category.getValue().equals(notice.getCategory()))) continue;</span>
+<span class="fc" id="L245">                VBox row = card(label(notice.getTitle(), &quot;section-title&quot;), label(notice.getMessage(), &quot;label&quot;),</span>
+<span class="fc" id="L246">                        label(notice.getCategory() + &quot; · &quot; + time(notice.getTimestamp()), &quot;muted&quot;));</span>
+<span class="fc bfc" id="L247" title="All 2 branches covered.">                row.getStyleClass().add(notice.isRead() ? &quot;notif-read&quot; : &quot;notif-unread&quot;);</span>
+<span class="fc" id="L248">                HBox actions = new HBox(8);</span>
+<span class="fc bfc" id="L249" title="All 2 branches covered.">                if (!notice.isRead()) actions.getChildren().add(button(&quot;Mark read&quot;, &quot;btn-outline&quot;, () -&gt; {</span>
+<span class="nc" id="L250">                    data.activity().readNotification(user, notice.getId());</span>
+<span class="nc" id="L251">                    updateBadge.run();</span>
+<span class="nc" id="L252">                    category.fireEvent(new ActionEvent());</span>
+<span class="nc" id="L253">                }));</span>
+<span class="pc bpc" id="L254" title="1 of 2 branches missed.">                if (notice.hasRelatedTarget()) actions.getChildren().add(button(&quot;Open&quot;, &quot;btn-primary&quot;, () -&gt; {</span>
+<span class="nc" id="L255">                    data.activity().readNotification(user, notice.getId());</span>
+<span class="nc" id="L256">                    updateBadge.run();</span>
+<span class="nc" id="L257">                    open.accept(notice);</span>
+<span class="nc" id="L258">                }));</span>
+<span class="fc" id="L259">                row.getChildren().add(actions);</span>
+<span class="fc" id="L260">                rows.getChildren().add(row);</span>
+<span class="fc" id="L261">            }</span>
+<span class="pc bpc" id="L262" title="1 of 2 branches missed.">            if (rows.getChildren().isEmpty()) rows.getChildren().add(label(&quot;No matching notifications.&quot;, &quot;muted&quot;));</span>
+<span class="fc" id="L263">        };</span>
+<span class="pc" id="L264">        category.setOnAction(event -&gt; render.run());</span>
+<span class="pc" id="L265">        unread.setOnAction(event -&gt; render.run());</span>
+<span class="pc" id="L266">        Button clear = button(&quot;Clear category&quot;, &quot;btn-outline&quot;, () -&gt; category.setValue(null));</span>
+<span class="fc" id="L267">        Button all = button(&quot;Mark all read&quot;, &quot;btn-primary&quot;, () -&gt; {</span>
+<span class="nc" id="L268">            data.markAllNotificationsRead(user.getUsername());</span>
+<span class="nc" id="L269">            updateBadge.run();</span>
+<span class="nc" id="L270">            render.run();</span>
+<span class="nc" id="L271">        });</span>
+<span class="fc" id="L272">        HBox toolbar = new HBox(8, category, clear, unread, all);</span>
+<span class="fc" id="L273">        toolbar.setAlignment(Pos.CENTER_LEFT);</span>
+<span class="fc" id="L274">        toolbar.getStyleClass().add(&quot;toolbar&quot;);</span>
+<span class="fc" id="L275">        render.run();</span>
+<span class="fc" id="L276">        ScrollPane scroll = scroll(rows);</span>
+<span class="fc" id="L277">        VBox.setVgrow(scroll, Priority.ALWAYS);</span>
+<span class="fc" id="L278">        return new VBox(12, toolbar, scroll);</span>
+    }
+
+    public static Node chat(User user, MarketplaceActivity activity, Chat selected, Consumer&lt;Chat&gt; formalRequest) {
+<span class="fc" id="L282">        List&lt;Chat&gt; chats = activity.chats(user);</span>
+<span class="pc bpc" id="L283" title="1 of 2 branches missed.">        if (chats.isEmpty()) return card(label(&quot;No conversations yet.&quot;, &quot;muted&quot;));</span>
+<span class="fc" id="L284">        var threads = choice(&quot;Conversation&quot;, chats);</span>
+<span class="fc" id="L285">        threads.setConverter(new javafx.util.StringConverter&lt;&gt;() {</span>
+            @Override public String toString(Chat chat) {
+<span class="nc bnc" id="L287" title="All 2 branches missed.">                if (chat == null) return &quot;&quot;;</span>
+<span class="nc bnc" id="L288" title="All 2 branches missed.">                String party = user.getRole() == UserRole.BUYER ? chat.getSellerUsername() : chat.getBuyerUsername();</span>
+<span class="nc" id="L289">                return chat.getListingTitle() + &quot; · @&quot; + party;</span>
+            }
+<span class="nc" id="L291">            @Override public Chat fromString(String text) { return null; }</span>
+        });
+<span class="pc bpc" id="L293" title="1 of 2 branches missed.">        threads.setValue(selected == null ? chats.get(0) : selected);</span>
+<span class="fc" id="L294">        TextField search = field(&quot;Search messages&quot;);</span>
+<span class="fc" id="L295">        VBox messages = new VBox(8);</span>
+<span class="fc" id="L296">        ScrollPane history = scroll(messages);</span>
+<span class="fc" id="L297">        VBox.setVgrow(history, Priority.ALWAYS);</span>
+<span class="fc" id="L298">        TextArea draft = new TextArea();</span>
+<span class="fc" id="L299">        draft.setPromptText(&quot;Write a message&quot;);</span>
+<span class="fc" id="L300">        draft.setAccessibleText(&quot;Write a message&quot;);</span>
+<span class="fc" id="L301">        draft.setWrapText(true);</span>
+<span class="fc" id="L302">        draft.setPrefRowCount(2);</span>
+<span class="fc" id="L303">        Runnable render = () -&gt; {</span>
+<span class="fc" id="L304">            messages.getChildren().clear();</span>
+<span class="fc bfc" id="L305" title="All 2 branches covered.">            for (Message message : activity.messages(user, threads.getValue().getId(), search.getText())) {</span>
+<span class="fc" id="L306">                messages.getChildren().add(card(label(&quot;@&quot; + message.getSenderUsername() + &quot; · &quot; + time(message.getSentAt()), &quot;muted&quot;),</span>
+<span class="fc" id="L307">                        label(message.getContent(), &quot;label&quot;)));</span>
+<span class="fc" id="L308">            }</span>
+<span class="pc bpc" id="L309" title="1 of 2 branches missed.">            if (messages.getChildren().isEmpty()) messages.getChildren().add(label(&quot;No matching messages.&quot;, &quot;muted&quot;));</span>
+<span class="fc" id="L310">            history.layout();</span>
+<span class="fc" id="L311">            history.setVvalue(1);</span>
+<span class="fc" id="L312">        };</span>
+<span class="fc" id="L313">        threads.setOnAction(event -&gt; {</span>
+<span class="nc" id="L314">            draft.clear();</span>
+<span class="nc" id="L315">            render.run();</span>
+<span class="nc" id="L316">        });</span>
+<span class="pc" id="L317">        search.textProperty().addListener((obs, old, value) -&gt; render.run());</span>
+<span class="fc" id="L318">        HBox actions = new HBox(8, button(&quot;Send message&quot;, &quot;btn-primary&quot;, () -&gt; {</span>
+<span class="nc" id="L319">            activity.send(user, threads.getValue().getId(), draft.getText());</span>
+<span class="nc" id="L320">            draft.clear();</span>
+<span class="nc" id="L321">            search.clear();</span>
+<span class="nc" id="L322">            render.run();</span>
+<span class="nc" id="L323">        }));</span>
+<span class="fc bfc" id="L324" title="All 2 branches covered.">        if (formalRequest != null) {</span>
+<span class="pc" id="L325">            actions.getChildren().add(button(&quot;Send formal request&quot;, &quot;btn-outline&quot;, () -&gt; formalRequest.accept(threads.getValue())));</span>
+        }
+<span class="fc" id="L327">        render.run();</span>
+<span class="fc" id="L328">        return new VBox(12, new HBox(8, threads, search), history, draft, actions);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

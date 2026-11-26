@@ -1,0 +1,427 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>MarketplaceActivity.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">HKUST Marketplace</a> &gt; <a href="index.source.html" class="el_package">com.hkust.marketplace.utils</a> &gt; <span class="el_source">MarketplaceActivity.java</span></div><h1>MarketplaceActivity.java</h1><pre class="source lang-java linenums">package com.hkust.marketplace.utils;
+
+import com.hkust.marketplace.models.*;
+
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Locale;
+import java.util.function.Supplier;
+
+import static com.hkust.marketplace.utils.MarketplaceAccounts.*;
+
+public final class MarketplaceActivity {
+<span class="fc" id="L14">    public enum Decision { ACCEPT, DECLINE, COUNTER }</span>
+<span class="fc" id="L15">    public record Terms(Double price, LocalDateTime start, LocalDateTime end) {</span>
+<span class="fc" id="L16">        public static Terms sale(double price) { return new Terms(price, null, null); }</span>
+<span class="fc" id="L17">        public static Terms loan(LocalDateTime start, LocalDateTime end) { return new Terms(null, start, end); }</span>
+<span class="fc" id="L18">        public static Terms giveaway() { return new Terms(null, null, null); }</span>
+
+        public String display(ListingType type) {
+<span class="fc bfc" id="L21" title="All 3 branches covered.">            return switch (type) {</span>
+<span class="fc" id="L22">                case SELL -&gt; &quot;HK$ &quot; + price;</span>
+<span class="fc" id="L23">                case LEND -&gt; start + &quot; to &quot; + end;</span>
+<span class="fc" id="L24">                case GIVEAWAY -&gt; &quot;Giveaway claim&quot;;</span>
+            };
+        }
+    }
+
+    private final DummyDataService data;
+    private final MarketplaceAccounts accounts;
+    private final Supplier&lt;LocalDateTime&gt; time;
+
+<span class="fc" id="L33">    MarketplaceActivity(DummyDataService data, Supplier&lt;LocalDateTime&gt; time) {</span>
+<span class="fc" id="L34">        this.data = data;</span>
+<span class="fc" id="L35">        accounts = new MarketplaceAccounts(data);</span>
+<span class="fc" id="L36">        this.time = time;</span>
+<span class="fc" id="L37">    }</span>
+
+    public Request submit(User buyer, String listingId, Terms terms) {
+<span class="fc" id="L40">        synchronized (data) {</span>
+<span class="fc" id="L41">            accounts.requireAccount(buyer, UserRole.BUYER);</span>
+<span class="fc" id="L42">            LocalDateTime now = time.get();</span>
+<span class="fc" id="L43">            Listing listing = data.findListing(listingId);</span>
+<span class="fc bfc" id="L44" title="All 4 branches covered.">            require(listing != null &amp;&amp; data.catalog().isPublic(listing), &quot;This listing is unavailable.&quot;);</span>
+<span class="fc" id="L45">            require(data.getActiveRequestsForListing(listingId).stream()</span>
+<span class="fc" id="L46">                    .noneMatch(r -&gt; buyer.getUsername().equals(r.getBuyerUsername())), &quot;You already have an active request.&quot;);</span>
+<span class="fc" id="L47">            validateTerms(listing, terms, now);</span>
+
+<span class="fc" id="L49">            Request request = new Request();</span>
+<span class="fc" id="L50">            request.setListingId(listingId);</span>
+<span class="fc" id="L51">            request.setListingTitle(listing.getTitle());</span>
+<span class="fc" id="L52">            request.setBuyerUsername(buyer.getUsername());</span>
+<span class="fc" id="L53">            request.setSellerUsername(listing.getSellerUsername());</span>
+<span class="fc" id="L54">            request.setType(listing.getType());</span>
+<span class="fc" id="L55">            request.setCreatedAt(now);</span>
+<span class="fc" id="L56">            setTerms(request, terms);</span>
+<span class="fc" id="L57">            data.addRequest(request);</span>
+<span class="fc bfc" id="L58" title="All 2 branches covered.">            if (listing.getType() == ListingType.GIVEAWAY) listing.setStatus(ListingStatus.RESERVED);</span>
+<span class="fc" id="L59">            record(request, buyer, &quot;Request submitted&quot;, terms);</span>
+<span class="fc" id="L60">            return request;</span>
+        }
+    }
+
+    public void respond(User actor, String requestId, Decision decision, Terms counter) {
+<span class="fc" id="L65">        synchronized (data) {</span>
+<span class="fc bfc" id="L66" title="All 2 branches covered.">            UserRole role = actor == null ? null : actor.getRole();</span>
+<span class="fc bfc" id="L67" title="All 4 branches covered.">            require(role == UserRole.BUYER || role == UserRole.SELLER, &quot;Use a buyer or seller account.&quot;);</span>
+<span class="fc" id="L68">            accounts.requireAccount(actor, role);</span>
+<span class="fc" id="L69">            Request request = data.findRequest(requestId);</span>
+<span class="fc bfc" id="L70" title="All 2 branches covered.">            boolean seller = role == UserRole.SELLER;</span>
+<span class="fc bfc" id="L71" title="All 6 branches covered.">            require(request != null &amp;&amp; actor.getUsername().equals(seller ? request.getSellerUsername()</span>
+<span class="fc" id="L72">                    : request.getBuyerUsername()), &quot;Request unavailable.&quot;);</span>
+<span class="fc bfc" id="L73" title="All 2 branches covered.">            require((seller ? &quot;Pending&quot; : &quot;Countered&quot;).equals(request.getStatus()), &quot;Request no longer awaits your response.&quot;);</span>
+
+<span class="fc" id="L75">            Listing listing = data.findListing(request.getListingId());</span>
+<span class="fc" id="L76">            LocalDateTime now = time.get();</span>
+<span class="pc bpc" id="L77" title="1 of 4 branches missed.">            switch (decision) {</span>
+                case DECLINE -&gt; {
+<span class="fc" id="L79">                    closeRequest(request, &quot;Declined&quot;, now);</span>
+<span class="fc" id="L80">                    releaseClaim(listing, request);</span>
+<span class="fc" id="L81">                    record(request, actor, &quot;Request declined&quot;, null);</span>
+<span class="fc" id="L82">                }</span>
+                case COUNTER -&gt; {
+<span class="fc bfc" id="L84" title="All 4 branches covered.">                    require(seller &amp;&amp; request.getType() != ListingType.GIVEAWAY, &quot;You cannot counter this request.&quot;);</span>
+<span class="fc" id="L85">                    requireAvailable(listing, request);</span>
+<span class="fc" id="L86">                    validateTerms(listing, counter, now);</span>
+<span class="fc" id="L87">                    request.setCounterPrice(counter.price());</span>
+<span class="fc" id="L88">                    request.setCounterBorrowStartAt(counter.start());</span>
+<span class="fc" id="L89">                    request.setCounterBorrowEndAt(counter.end());</span>
+<span class="fc" id="L90">                    request.setStatus(&quot;Countered&quot;);</span>
+<span class="fc" id="L91">                    request.setRespondedAt(now);</span>
+<span class="fc" id="L92">                    record(request, actor, &quot;Counteroffer sent&quot;, counter);</span>
+<span class="fc" id="L93">                }</span>
+                case ACCEPT -&gt; {
+<span class="fc" id="L95">                    requireAvailable(listing, request);</span>
+<span class="fc bfc" id="L96" title="All 2 branches covered.">                    Terms agreed = seller ? proposed(request) : counterTerms(request);</span>
+<span class="fc" id="L97">                    validateTerms(listing, agreed, now);</span>
+<span class="fc" id="L98">                    accept(request, listing, agreed, now);</span>
+<span class="fc" id="L99">                    record(request, actor, &quot;Request accepted&quot;, agreed);</span>
+                }
+            }
+<span class="fc" id="L102">        }</span>
+<span class="fc" id="L103">    }</span>
+
+    public void withdraw(User buyer, String requestId) {
+<span class="fc" id="L106">        synchronized (data) {</span>
+<span class="fc" id="L107">            accounts.requireAccount(buyer, UserRole.BUYER);</span>
+<span class="fc" id="L108">            Request request = data.findRequest(requestId);</span>
+<span class="pc bpc" id="L109" title="2 of 6 branches missed.">            require(request != null &amp;&amp; buyer.getUsername().equals(request.getBuyerUsername()) &amp;&amp; request.isActive(),</span>
+                    &quot;This request can no longer be withdrawn.&quot;);
+<span class="fc" id="L111">            closeRequest(request, &quot;Cancelled&quot;, time.get());</span>
+<span class="fc" id="L112">            releaseClaim(data.findListing(request.getListingId()), request);</span>
+<span class="fc" id="L113">            record(request, buyer, &quot;Request withdrawn&quot;, null);</span>
+<span class="fc" id="L114">        }</span>
+<span class="fc" id="L115">    }</span>
+
+    private void requireAvailable(Listing listing, Request request) {
+<span class="fc bfc" id="L118" title="All 2 branches covered.">        ListingStatus expected = request.getType() == ListingType.GIVEAWAY ? ListingStatus.RESERVED : ListingStatus.LIVE;</span>
+<span class="pc bpc" id="L119" title="2 of 6 branches missed.">        require(listing != null &amp;&amp; listing.getStatus() == expected &amp;&amp; listing.getType() == request.getType()</span>
+<span class="pc bpc" id="L120" title="1 of 2 branches missed.">                        &amp;&amp; request.getSellerUsername().equals(listing.getSellerUsername())</span>
+<span class="pc bpc" id="L121" title="1 of 2 branches missed.">                        &amp;&amp; available(data.findUser(request.getBuyerUsername()))</span>
+<span class="pc bpc" id="L122" title="1 of 2 branches missed.">                        &amp;&amp; available(data.findUser(request.getSellerUsername()))</span>
+<span class="pc bpc" id="L123" title="1 of 2 branches missed.">                        &amp;&amp; data.getDealsForListing(listing.getId()).stream().noneMatch(d -&gt; &quot;Accepted&quot;.equals(d.getStatus())),</span>
+                &quot;The listing or a participant is unavailable.&quot;);
+<span class="fc" id="L125">    }</span>
+
+    private static void validateTerms(Listing listing, Terms terms, LocalDateTime now) {
+<span class="fc bfc" id="L128" title="All 2 branches covered.">        require(terms != null, &quot;Enter the request terms.&quot;);</span>
+<span class="pc bpc" id="L129" title="1 of 4 branches missed.">        switch (listing.getType()) {</span>
+<span class="fc bfc" id="L130" title="All 6 branches covered.">            case SELL -&gt; require(validPrice(terms.price()) &amp;&amp; terms.start() == null &amp;&amp; terms.end() == null,</span>
+                    &quot;Enter a positive HKD amount with up to two decimal places.&quot;);
+            case LEND -&gt; {
+<span class="fc bfc" id="L133" title="All 6 branches covered.">                require(terms.price() == null &amp;&amp; terms.start() != null &amp;&amp; terms.end() != null</span>
+<span class="fc bfc" id="L134" title="All 2 branches covered.">                                &amp;&amp; !terms.start().isBefore(now), &quot;Choose a start at or after the current time and an end time.&quot;);</span>
+<span class="fc" id="L135">                Duration duration = Duration.between(terms.start(), terms.end());</span>
+<span class="fc bfc" id="L136" title="All 4 branches covered.">                require(duration.compareTo(Duration.ofSeconds(5)) &gt;= 0 &amp;&amp; listing.getLendingDays() != null</span>
+<span class="fc bfc" id="L137" title="All 2 branches covered.">                                &amp;&amp; duration.compareTo(Duration.ofDays(listing.getLendingDays())) &lt;= 0,</span>
+                        &quot;The borrowing period must be at least 5 seconds and within the listing duration.&quot;);
+<span class="fc" id="L139">            }</span>
+<span class="fc bfc" id="L140" title="All 6 branches covered.">            case GIVEAWAY -&gt; require(terms.price() == null &amp;&amp; terms.start() == null &amp;&amp; terms.end() == null,</span>
+                    &quot;A giveaway claim has no price or borrowing period.&quot;);
+        }
+<span class="fc" id="L143">    }</span>
+
+    static boolean validPrice(Double money) {
+<span class="fc bfc" id="L146" title="All 6 branches covered.">        return money != null &amp;&amp; Double.isFinite(money) &amp;&amp; money &gt; 0</span>
+<span class="fc bfc" id="L147" title="All 2 branches covered.">                &amp;&amp; java.math.BigDecimal.valueOf(money).stripTrailingZeros().scale() &lt;= 2;</span>
+    }
+
+    private void accept(Request request, Listing listing, Terms agreed, LocalDateTime now) {
+<span class="fc" id="L151">        setTerms(request, agreed);</span>
+<span class="fc" id="L152">        request.setStatus(&quot;Accepted&quot;);</span>
+<span class="fc" id="L153">        request.setRespondedAt(now);</span>
+<span class="fc" id="L154">        Deal deal = data.findDealForRequest(request.getId());</span>
+<span class="pc bpc" id="L155" title="1 of 2 branches missed.">        if (deal == null) deal = data.createDeal(request, &quot;Accepted&quot;, null);</span>
+<span class="fc" id="L156">        deal.setStatus(&quot;Accepted&quot;);</span>
+<span class="fc" id="L157">        deal.setCategory(listing.getCategory());</span>
+<span class="fc" id="L158">        deal.setOfferPrice(agreed.price());</span>
+<span class="fc" id="L159">        deal.setBorrowStartAt(agreed.start());</span>
+<span class="fc" id="L160">        deal.setBorrowEndAt(agreed.end());</span>
+<span class="fc" id="L161">        listing.setStatus(ListingStatus.RESERVED);</span>
+<span class="fc bfc" id="L162" title="All 4 branches covered.">        if (request.getType() == ListingType.LEND &amp;&amp; !agreed.start().isAfter(now)) startLoan(deal, listing);</span>
+<span class="fc bfc" id="L163" title="All 2 branches covered.">        for (Request other : data.getActiveRequestsForListing(listing.getId())) {</span>
+<span class="fc" id="L164">            closeRequest(other, &quot;Declined&quot;, now);</span>
+<span class="fc" id="L165">            record(other, data.findUser(other.getSellerUsername()), &quot;Request closed because another request was accepted&quot;, null);</span>
+<span class="fc" id="L166">        }</span>
+<span class="fc" id="L167">    }</span>
+
+    private static void setTerms(Request request, Terms terms) {
+<span class="fc" id="L170">        request.setOfferPrice(terms.price());</span>
+<span class="fc" id="L171">        request.setBorrowStartAt(terms.start());</span>
+<span class="fc" id="L172">        request.setBorrowEndAt(terms.end());</span>
+<span class="fc" id="L173">    }</span>
+
+    public static Terms proposed(Request request) {
+<span class="fc" id="L176">        return new Terms(request.getOfferPrice(), request.getBorrowStartAt(), request.getBorrowEndAt());</span>
+    }
+
+    public static Terms counterTerms(Request request) {
+<span class="fc" id="L180">        return new Terms(request.getCounterPrice(), request.getCounterBorrowStartAt(), request.getCounterBorrowEndAt());</span>
+    }
+
+    private void closeRequest(Request request, String status, LocalDateTime now) {
+<span class="fc" id="L184">        request.setStatus(status);</span>
+<span class="fc" id="L185">        request.setRespondedAt(now);</span>
+<span class="fc" id="L186">        Deal legacy = data.findDealForRequest(request.getId());</span>
+<span class="fc bfc" id="L187" title="All 4 branches covered.">        if (legacy != null &amp;&amp; &quot;Pending&quot;.equals(legacy.getStatus())) {</span>
+<span class="fc" id="L188">            legacy.setStatus(&quot;Cancelled&quot;);</span>
+<span class="fc" id="L189">            legacy.setCancelledAt(now);</span>
+        }
+<span class="fc" id="L191">    }</span>
+
+    private void releaseClaim(Listing listing, Request request) {
+<span class="pc bpc" id="L194" title="2 of 6 branches missed.">        if (listing != null &amp;&amp; request.getType() == ListingType.GIVEAWAY &amp;&amp; listing.getStatus() == ListingStatus.RESERVED</span>
+<span class="pc bpc" id="L195" title="1 of 2 branches missed.">                &amp;&amp; data.getActiveRequestsForListing(listing.getId()).isEmpty()</span>
+<span class="pc bpc" id="L196" title="1 of 2 branches missed.">                &amp;&amp; data.getDealsForListing(listing.getId()).stream().noneMatch(d -&gt; &quot;Accepted&quot;.equals(d.getStatus()))) {</span>
+<span class="fc" id="L197">            listing.setStatus(ListingStatus.LIVE);</span>
+        }
+<span class="fc" id="L199">    }</span>
+
+    void cancelUnavailable(User user) {
+<span class="fc" id="L202">        LocalDateTime now = time.get();</span>
+<span class="fc" id="L203">        advanceLoans();</span>
+<span class="fc bfc" id="L204" title="All 2 branches covered.">        for (Request request : data.getAllRequests()) {</span>
+<span class="fc bfc" id="L205" title="All 4 branches covered.">            if (!request.isActive() || !involves(user, request.getBuyerUsername(), request.getSellerUsername())) continue;</span>
+<span class="fc" id="L206">            closeRequest(request, &quot;Cancelled&quot;, now);</span>
+<span class="fc" id="L207">            releaseClaim(data.findListing(request.getListingId()), request);</span>
+<span class="fc" id="L208">            record(request, user, &quot;Request cancelled because an account became unavailable&quot;, null);</span>
+<span class="fc" id="L209">        }</span>
+<span class="fc bfc" id="L210" title="All 2 branches covered.">        for (Deal deal : data.getAllDeals()) {</span>
+<span class="fc bfc" id="L211" title="All 4 branches covered.">            if (!deal.isActiveOffer() || deal.isLoanStarted()</span>
+<span class="fc bfc" id="L212" title="All 2 branches covered.">                    || !involves(user, deal.getBuyerUsername(), deal.getSellerUsername())) continue;</span>
+<span class="fc" id="L213">            boolean reserved = &quot;Accepted&quot;.equals(deal.getStatus());</span>
+<span class="fc" id="L214">            deal.setStatus(&quot;Cancelled&quot;);</span>
+<span class="fc" id="L215">            deal.setCancelledAt(now);</span>
+<span class="fc" id="L216">            Request request = data.findRequest(deal.getRequestId());</span>
+<span class="fc bfc" id="L217" title="All 2 branches covered.">            if (request != null) closeRequest(request, &quot;Cancelled&quot;, now);</span>
+<span class="fc" id="L218">            Listing listing = data.findListing(deal.getListingId());</span>
+<span class="pc bpc" id="L219" title="2 of 6 branches missed.">            if (reserved &amp;&amp; listing != null &amp;&amp; listing.getStatus() == ListingStatus.RESERVED) listing.setStatus(ListingStatus.LIVE);</span>
+<span class="fc bfc" id="L220" title="All 2 branches covered.">            String other = user.getUsername().equals(deal.getBuyerUsername()) ? deal.getSellerUsername() : deal.getBuyerUsername();</span>
+<span class="fc" id="L221">            notify(other, &quot;Deal cancelled&quot;, deal.getListingTitle() + &quot;: a participant's account is unavailable.&quot;,</span>
+<span class="fc" id="L222">                    &quot;Deal&quot;, &quot;DEALS&quot;, deal.getId());</span>
+<span class="fc" id="L223">        }</span>
+<span class="fc" id="L224">    }</span>
+
+    private static boolean involves(User user, String buyer, String seller) {
+<span class="fc bfc" id="L227" title="All 4 branches covered.">        return user.getUsername().equalsIgnoreCase(buyer) || user.getUsername().equalsIgnoreCase(seller);</span>
+    }
+
+    public void finish(User actor, String dealId) {
+<span class="fc" id="L231">        synchronized (data) {</span>
+<span class="pc bpc" id="L232" title="1 of 2 branches missed.">            UserRole role = actor == null ? null : actor.getRole();</span>
+<span class="fc bfc" id="L233" title="All 4 branches covered.">            require(role == UserRole.BUYER || role == UserRole.SELLER, &quot;Use a buyer or seller account.&quot;);</span>
+<span class="fc" id="L234">            accounts.requireAccount(actor, role);</span>
+<span class="fc" id="L235">            Deal deal = data.findDeal(dealId);</span>
+<span class="fc bfc" id="L236" title="All 2 branches covered.">            boolean buyer = role == UserRole.BUYER;</span>
+<span class="fc bfc" id="L237" title="All 6 branches covered.">            require(deal != null &amp;&amp; actor.getUsername().equals(buyer ? deal.getBuyerUsername() : deal.getSellerUsername()),</span>
+                    &quot;Deal unavailable.&quot;);
+<span class="fc" id="L239">            advanceLoans();</span>
+<span class="fc" id="L240">            require(&quot;Accepted&quot;.equals(deal.getStatus()), &quot;This deal is no longer active.&quot;);</span>
+<span class="fc bfc" id="L241" title="All 4 branches covered.">            if (!buyer) require(deal.getDealType() == ListingType.SELL, &quot;Only a sale can be marked sold.&quot;);</span>
+<span class="fc bfc" id="L242" title="All 2 branches covered.">            if (deal.getDealType() == ListingType.LEND) require(deal.isLoanStarted(), &quot;The loan has not started.&quot;);</span>
+<span class="fc bfc" id="L243" title="All 2 branches covered.">            String outcome = deal.getDealType() == ListingType.LEND ? &quot;Returned&quot; : &quot;Completed&quot;;</span>
+<span class="fc" id="L244">            complete(deal, outcome, time.get());</span>
+<span class="fc" id="L245">        }</span>
+<span class="fc" id="L246">    }</span>
+
+    private void complete(Deal deal, String outcome, LocalDateTime now) {
+<span class="fc" id="L249">        deal.setStatus(outcome);</span>
+<span class="fc" id="L250">        deal.setCompletedAt(now);</span>
+<span class="fc" id="L251">        Listing listing = data.findListing(deal.getListingId());</span>
+<span class="pc bpc" id="L252" title="1 of 6 branches missed.">        if (listing != null &amp;&amp; (listing.getStatus() == ListingStatus.RESERVED || listing.getStatus() == ListingStatus.LENT)) {</span>
+<span class="fc bfc" id="L253" title="All 3 branches covered.">            listing.setStatus(switch (deal.getDealType()) {</span>
+<span class="fc" id="L254">                case SELL -&gt; ListingStatus.SOLD;</span>
+<span class="fc" id="L255">                case LEND -&gt; ListingStatus.LIVE;</span>
+<span class="fc" id="L256">                case GIVEAWAY -&gt; ListingStatus.GIVEN;</span>
+            });
+        }
+<span class="fc bfc" id="L259" title="All 2 branches covered.">        for (String username : List.of(deal.getBuyerUsername(), deal.getSellerUsername())) {</span>
+<span class="fc" id="L260">            notify(username, outcome, deal.getListingTitle(), &quot;Deal&quot;, &quot;DEALS&quot;, deal.getId());</span>
+<span class="fc" id="L261">        }</span>
+<span class="fc" id="L262">    }</span>
+
+    /** Advances scheduled loans on the FX thread, including while another portal is open. */
+    public boolean advanceLoans() {
+<span class="fc" id="L266">        synchronized (data) {</span>
+<span class="fc" id="L267">            boolean changed = false;</span>
+<span class="fc" id="L268">            LocalDateTime now = time.get();</span>
+<span class="fc bfc" id="L269" title="All 2 branches covered.">            for (Deal deal : data.getAllDeals()) {</span>
+<span class="fc bfc" id="L270" title="All 4 branches covered.">                if (deal.getDealType() != ListingType.LEND || !&quot;Accepted&quot;.equals(deal.getStatus())</span>
+<span class="pc bpc" id="L271" title="2 of 4 branches missed.">                        || deal.getBorrowStartAt() == null || deal.getBorrowEndAt() == null) continue;</span>
+<span class="fc" id="L272">                LocalDateTime end = deal.getBorrowEndAt();</span>
+<span class="fc bfc" id="L273" title="All 2 branches covered.">                if (!now.isBefore(end)) {</span>
+<span class="fc" id="L274">                    complete(deal, &quot;Auto-returned&quot;, end);</span>
+<span class="fc" id="L275">                    changed = true;</span>
+<span class="fc bfc" id="L276" title="All 2 branches covered.">                } else if (!now.isBefore(deal.getBorrowStartAt())) {</span>
+<span class="fc bfc" id="L277" title="All 2 branches covered.">                    if (!deal.isLoanStarted()) {</span>
+<span class="fc" id="L278">                        startLoan(deal, data.findListing(deal.getListingId()));</span>
+<span class="fc" id="L279">                        changed = true;</span>
+                    }
+<span class="fc" id="L281">                    Duration loan = Duration.between(deal.getBorrowStartAt(), end);</span>
+<span class="fc bfc" id="L282" title="All 2 branches covered.">                    Duration reminder = loan.dividedBy(2).compareTo(Duration.ofDays(1)) &lt; 0</span>
+<span class="fc" id="L283">                            ? loan.dividedBy(2) : Duration.ofDays(1);</span>
+<span class="fc bfc" id="L284" title="All 4 branches covered.">                    if (!deal.isReminderSent() &amp;&amp; !now.isBefore(end.minus(reminder))) {</span>
+<span class="fc" id="L285">                        deal.setReminderSent(true);</span>
+<span class="fc" id="L286">                        notify(deal.getBuyerUsername(), &quot;Borrowing due soon&quot;, deal.getListingTitle() + &quot; is due at &quot; + end,</span>
+<span class="fc" id="L287">                                &quot;Reminder&quot;, &quot;DEALS&quot;, deal.getId());</span>
+<span class="fc" id="L288">                        changed = true;</span>
+                    }
+                }
+<span class="fc" id="L291">            }</span>
+<span class="fc" id="L292">            return changed;</span>
+        }
+    }
+
+    private void startLoan(Deal deal, Listing listing) {
+<span class="fc" id="L297">        deal.setLoanStarted(true);</span>
+<span class="pc bpc" id="L298" title="1 of 4 branches missed.">        if (listing != null &amp;&amp; listing.getStatus() == ListingStatus.RESERVED) listing.setStatus(ListingStatus.LENT);</span>
+<span class="fc" id="L299">    }</span>
+
+    public Chat openChat(User buyer, String listingId) {
+<span class="fc" id="L302">        synchronized (data) {</span>
+<span class="fc" id="L303">            accounts.requireAccount(buyer, UserRole.BUYER);</span>
+<span class="fc bfc" id="L304" title="All 2 branches covered.">            for (Chat chat : data.getChatsForListing(listingId)) {</span>
+<span class="fc bfc" id="L305" title="All 2 branches covered.">                if (buyer.getUsername().equals(chat.getBuyerUsername())) return chat;</span>
+<span class="fc" id="L306">            }</span>
+<span class="fc" id="L307">            Listing listing = data.findListing(listingId);</span>
+<span class="pc bpc" id="L308" title="1 of 4 branches missed.">            require(listing != null &amp;&amp; (data.catalog().isPublic(listing)</span>
+<span class="nc bnc" id="L309" title="All 2 branches missed.">                    || data.getRequestsForBuyer(buyer.getUsername()).stream().anyMatch(r -&gt; listingId.equals(r.getListingId()))</span>
+<span class="pc bnc" id="L310" title="All 2 branches missed.">                    || data.getDealsForBuyer(buyer.getUsername()).stream().anyMatch(d -&gt; listingId.equals(d.getListingId()))),</span>
+                    &quot;This listing is unavailable.&quot;);
+<span class="fc" id="L312">            return chatFor(listingId, listing.getTitle(), buyer.getUsername(), listing.getSellerUsername());</span>
+        }
+    }
+
+    public Chat chatForRequest(User actor, String requestId) {
+<span class="fc" id="L317">        synchronized (data) {</span>
+<span class="fc" id="L318">            Request request = data.findRequest(requestId);</span>
+<span class="fc bfc" id="L319" title="All 2 branches covered.">            require(request != null, &quot;Request unavailable.&quot;);</span>
+<span class="fc" id="L320">            requireParticipant(actor, request.getBuyerUsername(), request.getSellerUsername());</span>
+<span class="fc" id="L321">            return chatFor(request.getListingId(), request.getListingTitle(), request.getBuyerUsername(), request.getSellerUsername());</span>
+        }
+    }
+
+    public List&lt;Chat&gt; chats(User actor) {
+<span class="fc" id="L326">        synchronized (data) {</span>
+<span class="pc bpc" id="L327" title="1 of 2 branches missed.">            UserRole role = actor == null ? null : actor.getRole();</span>
+<span class="fc bfc" id="L328" title="All 4 branches covered.">            require(role == UserRole.BUYER || role == UserRole.SELLER, &quot;Sign in as a buyer or seller.&quot;);</span>
+<span class="fc" id="L329">            accounts.requireAccount(actor, role);</span>
+<span class="fc bfc" id="L330" title="All 2 branches covered.">            return role == UserRole.BUYER ? data.getChatsForBuyer(actor.getUsername()) : data.getChatsForSeller(actor.getUsername());</span>
+        }
+    }
+
+    public List&lt;Message&gt; messages(User actor, String chatId, String query) {
+<span class="fc" id="L335">        synchronized (data) {</span>
+<span class="fc" id="L336">            Chat chat = requireChat(actor, chatId);</span>
+<span class="fc" id="L337">            String keyword = clean(query).toLowerCase(Locale.ROOT);</span>
+<span class="fc bfc" id="L338" title="All 2 branches covered.">            return chat.getMessages().stream().filter(m -&gt; MarketplaceCatalog.contains(m.getContent(), keyword)</span>
+<span class="fc bfc" id="L339" title="All 2 branches covered.">                    || MarketplaceCatalog.contains(m.getSenderUsername(), keyword)).toList();</span>
+        }
+    }
+
+    public void send(User actor, String chatId, String text) {
+<span class="fc" id="L344">        synchronized (data) {</span>
+<span class="fc" id="L345">            Chat chat = requireChat(actor, chatId);</span>
+<span class="fc bfc" id="L346" title="All 2 branches covered.">            String recipient = actor.getUsername().equals(chat.getBuyerUsername()) ? chat.getSellerUsername() : chat.getBuyerUsername();</span>
+<span class="fc" id="L347">            require(available(data.findUser(recipient)), &quot;The other participant is unavailable. You can still view the chat.&quot;);</span>
+<span class="fc" id="L348">            String message = requiredText(text, &quot;Message&quot;, 2000);</span>
+<span class="fc" id="L349">            data.addMessage(chat, actor.getUsername(), message, time.get());</span>
+<span class="fc" id="L350">            notify(recipient, &quot;New message from @&quot; + actor.getUsername(), chat.getListingTitle(), &quot;Chat&quot;, &quot;CHAT&quot;, chatId);</span>
+<span class="fc" id="L351">        }</span>
+<span class="fc" id="L352">    }</span>
+
+    private Chat requireChat(User actor, String chatId) {
+<span class="fc" id="L355">        Chat chat = data.findChat(chatId);</span>
+<span class="fc bfc" id="L356" title="All 2 branches covered.">        require(chat != null, &quot;Chat unavailable.&quot;);</span>
+<span class="fc" id="L357">        requireParticipant(actor, chat.getBuyerUsername(), chat.getSellerUsername());</span>
+<span class="fc" id="L358">        return chat;</span>
+    }
+
+    private void requireParticipant(User actor, String buyer, String seller) {
+<span class="fc bfc" id="L362" title="All 4 branches covered.">        require(actor != null &amp;&amp; involves(actor, buyer, seller), &quot;This conversation is private.&quot;);</span>
+<span class="fc" id="L363">        accounts.requireAccount(actor, actor.getRole());</span>
+<span class="fc" id="L364">    }</span>
+
+    private Chat chatFor(String listingId, String title, String buyer, String seller) {
+<span class="fc bfc" id="L367" title="All 2 branches covered.">        for (Chat chat : data.getChatsForListing(listingId)) {</span>
+<span class="fc bfc" id="L368" title="All 2 branches covered.">            if (buyer.equals(chat.getBuyerUsername())) return chat;</span>
+<span class="fc" id="L369">        }</span>
+<span class="fc" id="L370">        Chat chat = new Chat();</span>
+<span class="fc" id="L371">        chat.setListingId(listingId);</span>
+<span class="fc" id="L372">        chat.setListingTitle(title);</span>
+<span class="fc" id="L373">        chat.setBuyerUsername(buyer);</span>
+<span class="fc" id="L374">        chat.setSellerUsername(seller);</span>
+<span class="fc" id="L375">        chat.setCreatedAt(time.get());</span>
+<span class="fc" id="L376">        data.addChat(chat);</span>
+<span class="fc" id="L377">        return chat;</span>
+    }
+
+    private void record(Request request, User actor, String action, Terms terms) {
+<span class="fc" id="L381">        Chat chat = chatFor(request.getListingId(), request.getListingTitle(), request.getBuyerUsername(), request.getSellerUsername());</span>
+<span class="fc bfc" id="L382" title="All 2 branches covered.">        String detail = terms == null ? action : action + &quot; · &quot; + terms.display(request.getType());</span>
+<span class="fc" id="L383">        data.addMessage(chat, actor.getUsername(), detail, time.get());</span>
+<span class="fc bfc" id="L384" title="All 2 branches covered.">        String other = actor.getUsername().equals(request.getBuyerUsername()) ? request.getSellerUsername() : request.getBuyerUsername();</span>
+<span class="fc" id="L385">        notify(other, action, request.getListingTitle() + &quot; · &quot; + detail, &quot;Request&quot;, &quot;REQUESTS&quot;, request.getId());</span>
+<span class="fc" id="L386">    }</span>
+
+    public Rating rate(User buyer, String dealId, int stars, String comment) {
+<span class="fc" id="L389">        synchronized (data) {</span>
+<span class="fc" id="L390">            accounts.requireAccount(buyer, UserRole.BUYER);</span>
+<span class="fc" id="L391">            Deal deal = data.findDeal(dealId);</span>
+<span class="pc bpc" id="L392" title="1 of 6 branches missed.">            require(deal != null &amp;&amp; buyer.getUsername().equals(deal.getBuyerUsername()) &amp;&amp; deal.isFinished(),</span>
+                    &quot;You can review your own completed deals.&quot;);
+<span class="pc bpc" id="L394" title="1 of 4 branches missed.">            require(!deal.isRated() &amp;&amp; data.getAllRatings().stream().noneMatch(r -&gt; dealId.equals(r.getDealId())),</span>
+                    &quot;This deal already has a review.&quot;);
+<span class="fc bfc" id="L396" title="All 4 branches covered.">            require(stars &gt;= 1 &amp;&amp; stars &lt;= 5, &quot;Choose a rating between 1 and 5.&quot;);</span>
+<span class="fc" id="L397">            Rating rating = new Rating();</span>
+<span class="fc" id="L398">            rating.setDealId(dealId);</span>
+<span class="fc" id="L399">            rating.setBuyerUsername(buyer.getUsername());</span>
+<span class="fc" id="L400">            rating.setSellerUsername(deal.getSellerUsername());</span>
+<span class="fc" id="L401">            rating.setListingTitle(deal.getListingTitle());</span>
+<span class="fc" id="L402">            rating.setRating(stars);</span>
+<span class="fc" id="L403">            rating.setComment(limitedText(comment, &quot;Review&quot;, 1500));</span>
+<span class="fc" id="L404">            rating.setCreatedAt(time.get());</span>
+<span class="fc" id="L405">            data.addRating(rating);</span>
+<span class="fc" id="L406">            deal.setRated(true);</span>
+<span class="fc" id="L407">            notify(deal.getSellerUsername(), &quot;New review&quot;, deal.getListingTitle() + &quot; received &quot; + stars + &quot; stars.&quot;,</span>
+<span class="fc" id="L408">                    &quot;Rating&quot;, &quot;RATINGS&quot;, rating.getId());</span>
+<span class="fc" id="L409">            return rating;</span>
+        }
+    }
+
+    public void readNotification(User actor, String id) {
+<span class="fc" id="L414">        synchronized (data) {</span>
+<span class="pc bpc" id="L415" title="1 of 2 branches missed.">            accounts.requireAccount(actor, actor == null ? null : actor.getRole());</span>
+<span class="fc" id="L416">            Notification notification = data.getNotificationsFor(actor.getUsername()).stream()</span>
+<span class="fc" id="L417">                    .filter(n -&gt; n.getId().equals(id)).findFirst().orElse(null);</span>
+<span class="fc bfc" id="L418" title="All 2 branches covered.">            require(notification != null, &quot;Notification unavailable.&quot;);</span>
+<span class="fc" id="L419">            notification.setRead(true);</span>
+<span class="fc" id="L420">        }</span>
+<span class="fc" id="L421">    }</span>
+
+    private void notify(String username, String title, String message, String category, String screen, String id) {
+<span class="fc" id="L424">        data.addNotification(new Notification(username, title, message, category, screen, id));</span>
+<span class="fc" id="L425">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>

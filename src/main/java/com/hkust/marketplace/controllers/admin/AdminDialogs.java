@@ -39,6 +39,9 @@ final class AdminDialogs {
 
     static boolean confirmDestructive(String header, String message, String actionLabel) {
         Alert alert = new Alert(Alert.AlertType.WARNING);
+        // A warning alert only offers OK by default; destructive actions must also be
+        // cancellable so the user can back out without changing anything.
+        alert.getButtonTypes().setAll(ButtonType.OK, ButtonType.CANCEL);
         alert.setTitle("Confirm destructive action");
         alert.setHeaderText(header);
         alert.setContentText(message);
@@ -75,7 +78,10 @@ final class AdminDialogs {
 
     /** Keeps long warning messages readable instead of widening the alert off-screen. */
     private static void prepare(Alert alert) {
-        alert.initOwner(SceneManager.getPrimaryStage());
+        javafx.stage.Stage owner = SceneManager.getPrimaryStage();
+        if (owner != null && owner.isShowing() && owner.getScene() != null) {
+            alert.initOwner(owner);
+        }
         alert.getDialogPane().setPrefWidth(520);
         Node content = alert.getDialogPane().lookup(".content.label");
         if (content instanceof Label label) {
@@ -91,7 +97,10 @@ final class AdminDialogs {
         Dialog<String> dialog = new Dialog<>();
         dialog.setTitle("Reason Required");
         dialog.setHeaderText(header);
-        dialog.initOwner(SceneManager.getPrimaryStage());
+        javafx.stage.Stage owner = SceneManager.getPrimaryStage();
+        if (owner != null && owner.isShowing() && owner.getScene() != null) {
+            dialog.initOwner(owner);
+        }
 
         ButtonType submit = new ButtonType("Submit", ButtonBar.ButtonData.OK_DONE);
         ButtonType cancel = new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);

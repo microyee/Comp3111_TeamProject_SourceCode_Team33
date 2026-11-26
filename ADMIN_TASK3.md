@@ -134,10 +134,11 @@ Deactivating a user prevents login and hides that seller's `LIVE` listings from
 ## 5. Known limitations / next steps
 
 - Data is in-memory; restarting the app resets it.
-- `Chat` and `Message` domain classes and one seeded thread exist, but the Buyer/Seller
-  chat screen/use case is outside the Admin task and remains unimplemented.
-- Buyer-side **Report Listing** is a Task 1 item; the admin board is seeded with one
-  report notification so moderation navigation can be demonstrated.
+- Buyer and Seller chat is fully implemented through the shared `PortalUi.chat` screen;
+  the Admin task does not participate in chats.
+- Buyer-side **Report Listing** and admin **Reports** moderation are implemented
+  (`MarketplaceCatalog.reportListing` / `resolve`, `AdminReportsPane`); the admin board
+  is also seeded with a report notification for demonstration.
 - For production, move the rules from `DummyDataService` to a service/API layer, persist
   the audit log, and upgrade PBKDF2 to BCrypt/Argon2 as required.
 

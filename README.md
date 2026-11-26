@@ -9,13 +9,20 @@ chats, deals, ratings and notifications during the current application session. 
 
 ## Project documentation
 
+- [Activity 1 — revised UML and use-case specification](docs/Comp3111_TeamProject_Activity_1_Final_Revised.pdf)
+- [Activity 2 — documentation and source code](docs/COMP3111_Team33_Activity_2_Documentation_and_Source_Code.pdf)
 - [Sprint 2 Project Management Pack — PDF](COMP3111_Team33_Sprint2_Project_Management.pdf)
-- [Sprint 2 Project Management Pack — editable Word version](COMP3111_Team33_Sprint2_Project_Management.docx)
+- [Sprint 2 Project Management Pack — updated editable Word version](COMP3111_Team33_Sprint2_Project_Management_Updated.docx)
 
-The pack contains four Scrum meeting minutes, the Gantt chart, the Sprint 2 backlog,
-the burndown chart, a representative Git commit log, outcome/verification evidence and
-UI screenshots. The Word file is editable, with native Word tables for the minutes,
-Gantt chart and backlog.
+The Activity 1 revision replaces the two diagrams with implementation-aligned versions
+and adds UC-BU-10 (Report Listing), UC-BU-11 (Manage Favourites & Following) and
+UC-AD-9 (Manage Reports). Activity 2 documents the architecture, security rules,
+feature coverage, test evidence, source excerpts and a complete 51-file source index.
+The Word pack contains four Scrum meeting minutes, the Gantt chart, the Sprint 2
+backlog, the burndown chart, a representative Git commit log, outcome/verification
+evidence and UI screenshots; its tables are native and editable.
+
+Verification snapshot: **33 automated tests, 0 failures, 0 errors** (`./mvnw test`).
 
 ## Prerequisites
 

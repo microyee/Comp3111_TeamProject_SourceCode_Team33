@@ -19,6 +19,7 @@ chats, deals, ratings and notifications during the current application session. 
 - [Sprint 2 Project Management Pack — final PDF](docs/COMP3111_Team33_Sprint2_Project_Management_Final.pdf)
 - [Final submission evidence — PDF](docs/COMP3111_Team33_Final_Submission_Evidence.pdf)
 - [Final submission evidence — editable Word version](COMP3111_Team33_Sprint2_Project_Management_Updated.docx)
+- [Original generated Word version](docs/original/COMP3111_Team33_Sprint2_Project_Management_Original.docx)
 
 The Activity 1 revision replaces the two diagrams with implementation-aligned versions
 and adds UC-BU-10 (Report Listing), UC-BU-11 (Manage Favourites & Following) and

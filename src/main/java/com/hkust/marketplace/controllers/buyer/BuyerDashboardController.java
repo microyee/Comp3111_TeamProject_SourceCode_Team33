@@ -164,7 +164,7 @@ public class BuyerDashboardController {
         Label meta = label(listing.getCategory() + " · " + listing.getCondition() + " · " + listing.getMeetupLocation(), "muted");
         Label posted = label("Posted " + time(listing.getPostedAt()), "hint-text");
         HBox footer = new HBox(8, posted, spacer(),
-                button("View listing", "btn-primary", () -> openListing(listing.getId(), back)));
+                button("View", "btn-primary", () -> openListing(listing.getId(), back)));
         footer.setAlignment(Pos.CENTER_LEFT);
 
         card.getChildren().addAll(image, top, title, seller, meta, footer);

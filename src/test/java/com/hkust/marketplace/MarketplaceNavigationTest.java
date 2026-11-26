@@ -86,7 +86,7 @@ class MarketplaceNavigationTest {
             assertTrue(hasLabel(browse, "Enter a valid number."));
             field(browse, "Min HKD").clear();
             prompt(browse, "Search listings").setText(listing.getTitle());
-            button(stage, "View listing").fire();
+            button(stage, "View").fire();
             assertEquals("Listing Details", title(stage));
             stage.getScene().getRoot().applyCss();
             stage.getScene().getRoot().layout();
@@ -168,7 +168,7 @@ class MarketplaceNavigationTest {
             SceneManager.showBuyerLogin();
             signIn(stage, "market-test-buyer", "Password1", "Login");
             field(stage.getScene().getRoot(), "Search listings").setText("Integration film camera");
-            button(stage, "View listing").fire();
+            button(stage, "View").fire();
             runDialogs(button(stage, "Make offer / bid"), dialog -> {
                 field(dialog, "Amount in HKD").setText("0");
                 button(dialog, "Send").fire();

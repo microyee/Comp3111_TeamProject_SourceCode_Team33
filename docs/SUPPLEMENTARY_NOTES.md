@@ -71,7 +71,7 @@ Key design choices:
    reasons, stale-data guards for dialogs, and click-target detection so clicking a
    button inside a clickable table row does not open the row editor.
 6. **Testability.** Business rules are separated from views, and the project ships
-   64 automated tests with **79.67% branch coverage** (see
+   64 automated tests with **79.65% branch coverage** (see
    [`TESTING.md`](../TESTING.md)).
 
 ## 4. Algorithms and rules
@@ -176,4 +176,5 @@ Suggested end-to-end demo:
 - JaCoCo HTML report: [`docs/coverage/index.html`](coverage/index.html)
 - JavaDoc: [`docs/javadoc/index.html`](javadoc/index.html)
 - Screenshots: [`docs/screenshots/README.md`](screenshots/README.md)
-- Sprint 2 management pack: [`COMP3111_Team33_Sprint2_Project_Management_Updated.docx`](../COMP3111_Team33_Sprint2_Project_Management_Updated.docx)
+- Final submission evidence (18-page PDF): [`COMP3111_Team33_Final_Submission_Evidence.pdf`](COMP3111_Team33_Final_Submission_Evidence.pdf)
+- Sprint 2 management pack (editable Word): [`COMP3111_Team33_Sprint2_Project_Management_Updated.docx`](../COMP3111_Team33_Sprint2_Project_Management_Updated.docx)

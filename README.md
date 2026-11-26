@@ -1,11 +1,12 @@
 # HKUST Marketplace — JavaFX + Maven
 
-A **JavaFX + Maven** campus marketplace application for the COMP3111 group project.
+**Team 33** · COMP 3111 F2026 · Activity 2 submission  
+**GitHub repository:** <https://github.com/microyee/Comp3111_TeamProject_SourceCode_Team33>
 
-The project uses an in-memory data store (`DummyDataService`) so it runs without a
-database or network connection. Buyer, Seller and Admin share their listings, requests,
-chats, deals, ratings and notifications during the current application session. See
-[`ADMIN_TASK3.md`](ADMIN_TASK3.md) for the feature-by-feature mapping and demo script.
+A **JavaFX + Maven** campus marketplace application with three role-based portals:
+Buyer, Seller and Admin. The portals share an in-memory data store
+(`DummyDataService`), so the application runs without a database or network connection.
+See [`ADMIN_TASK3.md`](ADMIN_TASK3.md) for the Task 3 feature map and demo script.
 
 ## Project documentation
 
@@ -16,19 +17,32 @@ chats, deals, ratings and notifications during the current application session. 
 - [Supplementary notes](docs/SUPPLEMENTARY_NOTES.md) — architecture, WoW factors, algorithms, assumptions and limitations
 - [Activity 1 — revised UML and use-case specification](docs/Comp3111_TeamProject_Activity_1_Final_Revised.pdf)
 - [Activity 2 — documentation and source code](docs/COMP3111_Team33_Activity_2_Documentation_and_Source_Code.pdf)
-- [Sprint 2 Project Management Pack — final PDF](docs/COMP3111_Team33_Sprint2_Project_Management_Final.pdf)
-- [Final submission evidence — PDF](docs/COMP3111_Team33_Final_Submission_Evidence.pdf)
-- [Final submission evidence — editable Word version](COMP3111_Team33_Sprint2_Project_Management_Updated.docx)
-- [Original generated Word version](docs/original/COMP3111_Team33_Sprint2_Project_Management_Original.docx)
+- [Final submission evidence and Sprint 2 Project Management Pack — 18-page PDF](docs/COMP3111_Team33_Final_Submission_Evidence.pdf)
+- [Sprint 2 Project Management Pack — editable Word version](COMP3111_Team33_Sprint2_Project_Management_Updated.docx)
+
+### Activity 2 requirement checklist
+
+| Requirement | Evidence in this repository |
+|---|---|
+| Project ZIP | Package the repository root as described in [Submission ZIP](#submission-zip); upload the ZIP to Canvas |
+| GitHub repository link | <https://github.com/microyee/Comp3111_TeamProject_SourceCode_Team33> |
+| Screenshots of sample inputs/outputs | [`docs/screenshots/README.md`](docs/screenshots/README.md) — 12 application screens with the input/action that produced each output |
+| Unit test report, 100% pass | [`TESTING.md`](TESTING.md) and [`docs/test-reports/`](docs/test-reports) — 64 tests, 0 failures, 0 errors, 0 skipped |
+| Coverage report, > 65% branch | [`docs/coverage/index.html`](docs/coverage/index.html) — 79.65% branch, 90.59% line |
+| JavaDoc | [`docs/javadoc/index.html`](docs/javadoc/index.html) — all 51 source files across 7 packages |
+| Supplementary notes | [`docs/SUPPLEMENTARY_NOTES.md`](docs/SUPPLEMENTARY_NOTES.md) and page 17 of the final evidence PDF |
 
 The Activity 1 revision replaces the two diagrams with implementation-aligned versions
 and adds UC-BU-10 (Report Listing), UC-BU-11 (Manage Favourites & Following) and
 UC-AD-9 (Manage Reports). Activity 2 documents the architecture, security rules,
 feature coverage, test evidence, source excerpts and a complete 51-file source index.
-The updated Word pack contains four Scrum meeting minutes, the Gantt chart, the Sprint 2
-backlog, the burndown chart, a representative Git commit log, outcome/verification
-evidence, and two UI-evidence pages covering the buyer, seller and admin screens
-(13 pages); its tables are native and editable.
+
+The final 18-page evidence PDF combines four Scrum meeting minutes, the Gantt chart,
+the Sprint 2 backlog, the burndown chart, a representative Git commit log,
+outcome/verification evidence, two UI-evidence pages, unit-test and coverage evidence,
+JavaDoc evidence, sample inputs/outputs, supplementary notes and a repository
+checklist. The editable Word version contains the same 18 pages with native, editable
+tables.
 
 Verification snapshot: **64 automated tests, 0 failures, 0 errors** (`./mvnw clean verify`),
 with **79.65% branch coverage** (1,742 / 2,187 branches) and **90.59% line coverage**.
@@ -51,7 +65,15 @@ See [`TESTING.md`](TESTING.md) and the committed
 ## How to Run (Windows)
 
 Open **PowerShell** or **Command Prompt** in the project folder  
-(`...\HKUST-Marketplace\HKUST-Marketplace`):
+(`...\HKUST-Marketplace\HKUST-Marketplace`), then either double-click `run.bat` or run:
+
+```bat
+.\run.bat
+```
+
+`run.bat` checks for a full JDK, keeps Maven's wrapper and local repository inside the
+project (`.mvn-home\` and `.m2-repository\`), starts the application, and pauses on
+failure so the error stays visible.  You can also call the wrapper directly:
 
 ```powershell
 .\mvnw.cmd clean compile javafx:run
@@ -184,21 +206,36 @@ marketplace but reappear when the account is reactivated.
 ```
 HKUST-Marketplace/
 ├── mvnw / mvnw.cmd          ← Maven Wrapper (use these!)
+├── run.sh / run.bat         ← one-click launchers (macOS/Linux, Windows)
 ├── pom.xml
 ├── README.md
+├── TESTING.md              ← unit-test and coverage summary
+├── ADMIN_TASK3.md          ← Task 3 source map, edge cases and demo script
 ├── CREDITS.md              ← real photo sources and licences
-└── src/main/
-    ├── java/com/hkust/marketplace/
-    │   ├── MarketplaceApp.java
-    │   ├── controllers/
-    │   ├── models/
-    │   └── utils/
-    └── resources/
-        ├── fxml/
-        ├── css/styles.css
-        └── images/
-            ├── hkust_logo.png
-            └── listings/        ← real listing photographs (see CREDITS.md)
+├── COMP3111_Team33_Sprint2_Project_Management_Updated.docx
+├── docs/                   ← evidence, PDFs, screenshots, JavaDoc, coverage
+│   ├── COMP3111_Team33_Final_Submission_Evidence.pdf
+│   ├── COMP3111_Team33_Activity_2_Documentation_and_Source_Code.pdf
+│   ├── Comp3111_TeamProject_Activity_1_Final_Revised.pdf
+│   ├── SUPPLEMENTARY_NOTES.md
+│   ├── screenshots/
+│   ├── test-reports/
+│   ├── coverage/
+│   └── javadoc/
+└── src/
+    ├── main/
+    │   ├── java/com/hkust/marketplace/
+    │   │   ├── MarketplaceApp.java
+    │   │   ├── controllers/
+    │   │   ├── models/
+    │   │   └── utils/
+    │   └── resources/
+    │       ├── fxml/
+    │       ├── css/styles.css
+    │       └── images/
+    │           ├── hkust_logo.png
+    │           └── listings/        ← real listing photographs (see CREDITS.md)
+    └── test/java/com/hkust/marketplace/   ← 20 test classes + FxTest support
 ```
 
 ## Troubleshooting
@@ -245,13 +282,13 @@ $env:MAVEN_USER_HOME="$PWD\.mvn-home"
 ```
 Copy the lines that start with `Exception in thread` or `Caused by`.
 
-## For Students — Next Steps (Backend)
+## Future work (production hardening)
 
 1. Replace `DummyDataService` with real repositories / REST clients
 2. Keep the password-hashing approach (or upgrade PBKDF2 to BCrypt/Argon2) — never store plaintext
 3. Add JWT / session auth and enforce RBAC on the API (the UI already guards the admin screens)
 4. Persist data in a database, including the audit log
-5. Photo upload, chat, auto-return for borrowed items, etc.
+5. Add a photo-upload service, real-time chat and a background scheduler for loan reminders
 
 ## Admin implementation notes
 
@@ -269,13 +306,16 @@ The listing photographs are real photos sourced from Flickr via Openverse.  See
 
 ## Submission ZIP
 
-Include `src/`, `pom.xml`, `mvnw`, `mvnw.cmd`, `.mvn/`, `run.sh`, `README.md`, `ADMIN_TASK3.md` and
-`CREDITS.md`.  Exclude generated/restricted-environment caches: `target/`,
-`.mvn-home/`, `.m2-repository/`, `.DS_Store` and IDE folders.
+Create the ZIP from the repository root and include `src/`, `docs/`, `pom.xml`, `mvnw`,
+`mvnw.cmd`, `.mvn/`, `run.sh`, `run.bat`, `README.md`, `TESTING.md`, `ADMIN_TASK3.md`,
+`CREDITS.md` and `COMP3111_Team33_Sprint2_Project_Management_Updated.docx`.  Exclude
+generated/restricted-environment caches: `target/`, `.mvn-home/`, `.m2-repository/`,
+`.DS_Store`, `*.zip` and IDE folders.  Verify the extracted ZIP with
+`./mvnw clean verify` before uploading it to Canvas.
 
 ## Licence
 
-Educational use — HKUST COMP project skeleton.
+Educational use — HKUST COMP3111 Team 33 project.
 
 ## Tests
 

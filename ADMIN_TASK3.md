@@ -22,8 +22,10 @@ that were implemented, and gives a short demo script for the TA.
 | UI motion, photos & click actions | `controllers/UiAnimations.java` (page fade/slide, spinner, hover lift, badge pulse, card stagger), `controllers/PhotoViewer.java` (zoom/prev/next viewer) | `utils/ImageSupport.java`, real photos in `resources/images/listings/*.png` (credits in `CREDITS.md`); seller/admin listing clicks open the edit form |
 
 The admin packages are deliberately split into one pane per subtask.  The dashboard only
-handles navigation and the unread badge; business rules live in `DummyDataService` so the
-same rule is used by the UI and could be reused by a future API layer.
+handles navigation and the unread badge; business rules live in `DummyDataService` and
+the service layer (`MarketplaceAccounts`, `MarketplaceCatalog`, `MarketplaceActivity`,
+`SellerMarketplace`) so the same rule is used by the UI and could be reused by a future
+API layer.
 
 ## 2. Shared rules
 
@@ -144,8 +146,8 @@ Deactivating a user prevents login and hides that seller's `LIVE` listings from
 
 ## 6. Alignment with the Activity 1 proposal
 
-The final Activity 1 PDF (`Comp3111_TeamProject_Activity_1_Final.pdf`) defines eight
-Task 3 use cases.  All eight are implemented:
+The final Activity 1 PDF (`Comp3111_TeamProject_Activity_1_Final_Revised.pdf`) defines
+the Task 3 use cases.  All of them, including report moderation, are implemented:
 
 | Activity 1 use case | Implementation |
 |---|---|
@@ -157,6 +159,7 @@ Task 3 use cases.  All eight are implemented:
 | UC-AD-6 Manage All Listings | `AdminListingsPane`, `AdminListingFormDialog` |
 | UC-AD-7 Moderate Ratings | `AdminRatingsPane` |
 | UC-AD-8 Manage Profile | `AdminProfilePane` |
+| UC-AD-9 Manage Reports | `AdminReportsPane` |
 
 The shared validation rules (password strength, case-insensitive unique username,
 non-blank full name) and the Task 3.1–3.8 → UC-AD mapping in the PDF are followed.
@@ -192,10 +195,9 @@ The class structure now mirrors those entities:
 | `Request` + `Deal` | `Request`, with `Deal.requestId`; one Request creates at most one Deal |
 | `Chat`, `Message` | `Chat` and composed `Message` list; one seeded thread |
 
-The Buyer and Seller specifications in the same PDF (`UC-BU-1..9`, `UC-SE-1..9`) are
-not fully implemented by this repository; the Buyer/Seller screens are still the
-supplied skeleton.  Request, Rating and Chat data are seeded/modelled, but the
-Buyer/Seller workflows that create them are outside the Admin task.  Therefore the
-Admin Task 3 design is fulfilled and the domain UML is represented, while the whole
-three-role application is not yet a complete implementation of every Activity 1 use
-case.
+The Buyer and Seller specifications in the same PDF (`UC-BU-1..11`, `UC-SE-1..9`) are
+implemented by the buyer and seller portals in this repository.  Favourites/following
+and buyer listing reports are covered by the current-code addendum in the revised
+Activity 1 PDF (`UC-BU-10`, `UC-BU-11`), and report moderation is implemented as
+`UC-AD-9` in this Task 3 scope.  The complete three-role application therefore
+implements the Activity 1 use cases, with the known deviations listed above.

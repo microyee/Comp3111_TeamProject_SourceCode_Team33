@@ -21,8 +21,9 @@ UI state for each portal.
 | [sprint2-burndown.png](sprint2-burndown.png) | Project | Planned versus remaining Sprint 2 effort | Completed 120 h sprint with 0 h remaining |
 | [hkust-logo.png](hkust-logo.png) | Shared | Application branding | HKUST logo used on the welcome and login screens |
 
-The full-resolution screens were captured at 1200 × 780 from the running JavaFX
-application. Reproduce them with:
+The application screens were captured at 1200 × 780 from the running JavaFX
+application; the logo and the Sprint 2 burndown chart keep their native sizes.
+Reproduce the application screens with:
 
 ```powershell
 .\mvnw.cmd clean compile javafx:run

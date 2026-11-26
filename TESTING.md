@@ -84,6 +84,11 @@ xvfb-run -a ./mvnw clean verify
 and the JaCoCo HTML/CSV/XML reports to `target/site/jacoco`.
 Open `target/site/jacoco/index.html` to browse the coverage report.
 
+Re-verification from the cleaned submission folder (26 November 2026, macOS,
+Eclipse Temurin JDK 25, Maven Wrapper): `./mvnw test` finished with
+**64 tests, 0 failures, 0 errors, 0 skipped** and `BUILD SUCCESS`; the JavaFX UI
+tests ran with a display and none were skipped.
+
 The screenshot evidence for the application screens is in
 [`docs/screenshots`](docs/screenshots/README.md), and the generated JavaDoc is at
 [`docs/javadoc/index.html`](docs/javadoc/index.html).
@@ -97,4 +102,7 @@ The screenshot evidence for the application screens is in
   skipped (JUnit aborted) with an instruction to run under `xvfb-run`; the pure-domain
   tests still run in that environment.
 - The committed coverage snapshot was produced from a full `clean verify` run on the
-  configuration listed above.
+  configuration listed above (JDK 21). The source is unchanged in the submitted build;
+  re-running with a newer JDK compiler can slightly change the bytecode branch total
+  (for example, 2,219 branches at 78.2% on JDK 25) while remaining well above the
+  65% requirement.

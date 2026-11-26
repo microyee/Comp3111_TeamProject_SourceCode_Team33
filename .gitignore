@@ -9,3 +9,7 @@ target/
 .idea/
 *.iml
 .DS_Store
+
+# Local submission archives and temporary tool caches
+*.zip
+.swift-cache/
